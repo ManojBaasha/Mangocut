@@ -1,32 +1,29 @@
 {
-  "name": "opencut",
+  "name": "mangocut",
   "packageManager": "bun@1.2.18",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
-    "build:tools": "turbo run build --filter=@opencut/tools",
     "build:wasm": "wasm-pack build rust/wasm --target bundler --out-dir pkg",
-    "build:web": "turbo run build --filter=@opencut/web",
-    "deploy:web": "turbo run deploy --filter=@opencut/web",
-    "dev:tools": "turbo run dev --filter=@opencut/tools",
+    "build:web": "turbo run build --filter=@mangocut/web",
+    "build:web:electron": "NEXT_PUBLIC_SITE_URL=http://127.0.0.1:47823 MANGOCUT_DESKTOP=1 turbo run build --filter=@mangocut/web --force",
+    "prepare:electron": "bun run --cwd apps/electron prepare:standalone",
+    "build:electron": "bun run build:web:electron && bun run prepare:electron && bun run --cwd apps/electron dist:mac",
+    "dev:electron": "bun run --cwd apps/electron dev",
     "dev:wasm": "cargo watch -w rust/crates -w rust/wasm/src -s 'wasm-pack build rust/wasm --target bundler --out-dir pkg'",
-    "dev:web": "turbo run dev --filter=@opencut/web",
+    "dev:web": "turbo run dev --filter=@mangocut/web",
     "format:web": "biome format apps/web/src/services/renderer --write --max-diagnostics=1000",
     "generate:fonts": "npx tsx apps/web/scripts/generate-font-sprites.ts",
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",
     "lint:web:fix": "biome lint apps/web/src --write --unsafe --max-diagnostics=1000",
-    "preview:web": "turbo run preview --filter=@opencut/web",
     "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
-    "start:tools": "turbo run start --filter=@opencut/tools",
     "test": "bun test"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "better-auth": "^1.4.15",
     "next": "^16.1.3"
   },
   "devDependencies": {
@@ -34,6 +31,12 @@
     "typescript": "^6.0.2"
   },
   "trustedDependencies": [
-    "@tailwindcss/oxide"
+    "@tailwindcss/oxide",
+    "electron",
+    "electron-winstaller",
+    "esbuild",
+    "onnxruntime-node",
+    "protobufjs",
+    "sharp"
   ]
 }

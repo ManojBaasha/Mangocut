@@ -1,9 +1,9 @@
 [package]
-name = "opencut-wasm"
+name = "mangocut-wasm"
 version = "0.2.5"
 edition = "2024"
 description = "Shared video editor logic compiled to WebAssembly"
-repository = "https://github.com/opencut/opencut"
+repository = "https://github.com/ManojBaasha/Mangocut"
 license = "MIT"
 
 [lib]

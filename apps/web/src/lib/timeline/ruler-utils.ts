@@ -1,11 +1,11 @@
-import type { FrameRate } from "opencut-wasm";
+import type { FrameRate } from "mangocut-wasm";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { frameRateToFloat } from "@/lib/fps/utils";
 
 /**
  * frame intervals for labels - starts at 2 so there's always at least
  * one tick between labels even at max zoom.
- * pattern: 2, 3, 5, 10, 15 (matches CapCut)
+ * pattern: 2, 3, 5, 10, 15 (common NLE ruler densities)
  */
 const LABEL_FRAME_INTERVALS = [2, 3, 5, 10, 15] as const;
 

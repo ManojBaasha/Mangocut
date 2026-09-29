@@ -1,4 +1,4 @@
-import { mediaTimeToSeconds } from "opencut-wasm";
+import { mediaTimeToSeconds } from "mangocut-wasm";
 import {
 	getElementLocalTime,
 	resolveColorAtTime,

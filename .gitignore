@@ -6,6 +6,7 @@
 node_modules
 .cursorignore
 .turbo
+package-lock.json
 
 .env*
 !*.env.example
@@ -24,3 +25,8 @@ bun.lockb
 target/
 
 .cargo-tools/
+
+# Electron
+apps/electron/dist/
+apps/electron/resources/next/
+apps/electron/resources/next/**

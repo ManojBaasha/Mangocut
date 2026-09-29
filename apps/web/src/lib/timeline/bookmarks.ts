@@ -1,6 +1,6 @@
 import type { Bookmark } from "@/lib/timeline";
-import type { FrameRate } from "opencut-wasm";
-import { roundToFrame } from "opencut-wasm";
+import type { FrameRate } from "mangocut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 
 function bookmarkTimeEqual({
 	bookmarkTime,

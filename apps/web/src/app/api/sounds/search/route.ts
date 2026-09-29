@@ -149,6 +149,23 @@ function transformFreesoundResult(
 
 export async function GET(request: NextRequest) {
 	try {
+		if (!webEnv.FREESOUND_API_KEY || !webEnv.FREESOUND_CLIENT_ID) {
+			return NextResponse.json(
+				{
+					count: 0,
+					next: null,
+					previous: null,
+					results: [],
+					type: "effects",
+					page: 1,
+					pageSize: 20,
+					sort: "downloads",
+					error: "Freesound is not configured in this desktop build",
+				},
+				{ status: 200 },
+			);
+		}
+
 		const { limited } = await checkRateLimit({ request });
 		if (limited) {
 			return NextResponse.json({ error: "Too many requests" }, { status: 429 });

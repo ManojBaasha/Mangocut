@@ -1,6 +1,7 @@
+import path from "node:path";
 import type { NextConfig } from "next";
-import { withBotId } from "botid/next/config";
-import { withContentCollections } from "@content-collections/next";
+
+const repoRoot = path.join(__dirname, "../..");
 
 const nextConfig: NextConfig = {
 	compiler: {
@@ -9,6 +10,10 @@ const nextConfig: NextConfig = {
 	reactStrictMode: true,
 	productionBrowserSourceMaps: true,
 	output: "standalone",
+	outputFileTracingRoot: repoRoot,
+	turbopack: {
+		root: repoRoot,
+	},
 	images: {
 		remotePatterns: [
 			{
@@ -18,10 +23,6 @@ const nextConfig: NextConfig = {
 			{
 				protocol: "https",
 				hostname: "images.unsplash.com",
-			},
-			{
-				protocol: "https",
-				hostname: "images.marblecms.com",
 			},
 			{
 				protocol: "https",
@@ -35,20 +36,8 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "api.iconify.design",
 			},
-			{
-				protocol: "https",
-				hostname: "api.simplesvg.com",
-			},
-			{
-				protocol: "https",
-				hostname: "api.unisvg.com",
-			},
-			{
-				protocol: "https",
-				hostname: "cdn.brandfetch.io",
-			},
 		],
 	},
 };
 
-export default withContentCollections(withBotId(nextConfig));
+export default nextConfig;

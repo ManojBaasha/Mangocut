@@ -2,7 +2,7 @@ import {
 	applyEffectPasses,
 	applyMaskFeather as applyMaskFeatherWasm,
 	initializeGpu,
-} from "opencut-wasm";
+} from "mangocut-wasm";
 import type { EffectPass, EffectUniformValue } from "@/lib/effects/types";
 
 let gpuAvailable = false;

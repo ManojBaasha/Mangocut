@@ -1,4 +1,4 @@
-import type { FrameRate } from "opencut-wasm";
+import type { FrameRate } from "mangocut-wasm";
 import type { TScene } from "@/lib/timeline/types";
 
 export type TBackground =

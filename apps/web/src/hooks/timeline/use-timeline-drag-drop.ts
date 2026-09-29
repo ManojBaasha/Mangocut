@@ -6,7 +6,7 @@ import { showMediaUploadToast } from "@/lib/media/upload-toast";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
-import { roundToFrame } from "opencut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 import {
 	buildTextElement,
 	buildGraphicElement,

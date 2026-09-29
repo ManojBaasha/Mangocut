@@ -3812,14 +3812,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "opencut-desktop"
+name = "mangocut-desktop"
 version = "0.1.0"
 dependencies = [
  "gpui",
 ]
 
 [[package]]
-name = "opencut-wasm"
+name = "mangocut-wasm"
 version = "0.2.5"
 dependencies = [
  "bridge",

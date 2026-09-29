@@ -1,4 +1,4 @@
-import { snappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "mangocut-wasm";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEffect, useCallback, useRef } from "react";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";

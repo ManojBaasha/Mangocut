@@ -8,7 +8,7 @@ import {
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
-import { roundToFrame } from "opencut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import {
 	findSnapPoints,

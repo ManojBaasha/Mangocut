@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
-import { roundToFrame } from "opencut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";

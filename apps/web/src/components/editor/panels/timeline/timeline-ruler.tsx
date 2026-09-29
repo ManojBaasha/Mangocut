@@ -2,7 +2,7 @@ import { type JSX, useLayoutEffect, useRef } from "react";
 import {
 	BASE_TIMELINE_PIXELS_PER_SECOND,
 } from "@/lib/timeline/scale";
-import { mediaTimeToSeconds } from "opencut-wasm";
+import { mediaTimeToSeconds } from "mangocut-wasm";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TIMELINE_RULER_HEIGHT_PX } from "./layout";
 import { DEFAULT_FPS } from "@/lib/fps/defaults";

@@ -1,6 +1,6 @@
 {
-	"name": "OpenCut",
-	"description": "A simple but powerful video editor that gets the job done. In your browser.",
+	"name": "Mangocut",
+	"description": "Edit Videos with AI. A simple, powerful video editor for web and desktop.",
 	"display": "standalone",
 	"start_url": "/",
 	"icons": [

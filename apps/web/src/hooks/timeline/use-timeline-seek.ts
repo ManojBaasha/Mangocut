@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
-import { snappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "mangocut-wasm";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEditor } from "../use-editor";
 

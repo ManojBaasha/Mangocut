@@ -13,15 +13,13 @@ import Link from "next/link";
 import { RenameProjectDialog } from "./dialogs/rename-project-dialog";
 import { DeleteProjectDialog } from "./dialogs/delete-project-dialog";
 import { useRouter } from "next/navigation";
-import { FaDiscord } from "react-icons/fa6";
 import { ExportButton } from "./export-button";
-import { FeedbackPopover } from "@/lib/feedback/components/feedback-popover";
 import { ThemeToggle } from "../theme-toggle";
 import { DEFAULT_LOGO_URL } from "@/lib/site/brand";
 import { SOCIAL_LINKS } from "@/lib/site/social";
 import { toast } from "sonner";
 import { useEditor } from "@/hooks/use-editor";
-import { CommandIcon, Logout05Icon } from "@hugeicons/core-free-icons";
+import { CommandIcon, GithubIcon, Logout05Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "./dialogs/shortcuts-dialog";
 import Image from "next/image";
@@ -35,7 +33,6 @@ export function EditorHeader() {
 				<EditableProjectName />
 			</div>
 			<nav className="flex items-center gap-2">
-				<FeedbackPopover />
 				<ExportButton />
 				<ThemeToggle />
 			</nav>
@@ -114,10 +111,10 @@ function ProjectDropdown() {
 					<Button variant="ghost" size="icon" className="p-1 rounded-sm size-8">
 						<Image
 							src={DEFAULT_LOGO_URL}
-							alt="Project thumbnail"
+							alt="Mangocut"
 							width={32}
 							height={32}
-							className="invert dark:invert-0 size-5"
+							className="size-5"
 						/>
 					</Button>
 				</DropdownMenuTrigger>
@@ -139,13 +136,13 @@ function ProjectDropdown() {
 
 					<DropdownMenuSeparator />
 
-					<DropdownMenuItem asChild icon={<FaDiscord className="size-4!" />}>
+					<DropdownMenuItem asChild icon={<HugeiconsIcon icon={GithubIcon} />}>
 						<Link
-							href={SOCIAL_LINKS.discord}
+							href={SOCIAL_LINKS.github}
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							Discord
+							GitHub
 						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

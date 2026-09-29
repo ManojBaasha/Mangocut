@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
-import { Button } from "./ui/button";
-import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import {
-	Copy01Icon,
 	Download01Icon,
 	GithubIcon,
 	LinkSquare02Icon,
@@ -16,7 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/utils/ui";
-import { DEFAULT_LOGO_URL, SITE_URL } from "@/lib/site/brand";
+import { DEFAULT_LOGO_URL } from "@/lib/site/brand";
 import { SOCIAL_LINKS } from "@/lib/site/social";
 import {
 	ContextMenu,
@@ -30,22 +27,10 @@ export function Header() {
 	const closeMenu = () => setIsMenuOpen(false);
 
 	const links = [
-		{
-			label: "Roadmap",
-			href: "/roadmap",
-		},
-		{
-			label: "Contributors",
-			href: "/contributors",
-		},
-		{
-			label: "Sponsors",
-			href: "/sponsors",
-		},
-		{
-			label: "Blog",
-			href: "/blog",
-		},
+		{ label: "Projects", href: "/projects" },
+		{ label: "Changelog", href: "/changelog" },
+		{ label: "Privacy", href: "/privacy" },
+		{ label: "Terms", href: "/terms" },
 	];
 
 	return (
@@ -54,11 +39,10 @@ export function Header() {
 				<div className="relative z-10 flex items-center gap-6">
 					<ContextMenu>
 						<ContextMenuTrigger asChild>
-							<Link href="/" className="flex items-center gap-3">
+							<Link href="/projects" className="flex items-center gap-3">
 								<Image
 									src={DEFAULT_LOGO_URL}
-									alt="OpenCut Logo"
-									className="invert dark:invert-0"
+									alt="Mangocut Logo"
 									width={32}
 									height={32}
 								/>
@@ -72,126 +56,75 @@ export function Header() {
 									await navigator.clipboard.writeText(svg);
 								}}
 							>
-								<HugeiconsIcon icon={Copy01Icon} />
 								Copy SVG
 							</ContextMenuItem>
 							<ContextMenuItem
 								onClick={() => {
 									const a = document.createElement("a");
 									a.href = DEFAULT_LOGO_URL;
-									a.download = "opencut-logo.svg";
+									a.download = "mangocut-logo.svg";
 									a.click();
 								}}
 							>
 								<HugeiconsIcon icon={Download01Icon} />
 								Download SVG
 							</ContextMenuItem>
-							<Link href="/brand">
-								<ContextMenuItem>
+							<ContextMenuItem asChild>
+								<a href={DEFAULT_LOGO_URL} target="_blank" rel="noreferrer">
 									<HugeiconsIcon icon={LinkSquare02Icon} />
-									Brand assets
-								</ContextMenuItem>
-							</Link>
+									Open SVG
+								</a>
+							</ContextMenuItem>
 						</ContextMenuContent>
 					</ContextMenu>
 
-					<nav className="hidden items-center gap-4 md:flex">
+					<nav className="hidden items-center gap-6 md:flex">
 						{links.map((link) => (
-							<Link key={link.href} href={link.href}>
-								<Button variant="text" className="p-0 text-sm">
-									{link.label}
-								</Button>
+							<Link
+								key={link.href}
+								href={link.href}
+								className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+							>
+								{link.label}
 							</Link>
 						))}
 					</nav>
 				</div>
 
-				<div className="relative z-10">
-					<div className="flex items-center gap-3 md:hidden">
-						<Button
-							variant="text"
-							size="icon"
-							className="flex items-center justify-center p-0"
-							onClick={() => setIsMenuOpen(!isMenuOpen)}
-						>
-							<HugeiconsIcon icon={Menu02Icon} size={30} />
+				<div className="relative z-10 flex items-center gap-2">
+					<ThemeToggle />
+					<Link href={SOCIAL_LINKS.github} className="hidden sm:inline-flex">
+						<Button variant="ghost" size="icon">
+							<HugeiconsIcon icon={GithubIcon} />
 						</Button>
-					</div>
-					<div className="hidden items-center gap-3 md:flex">
-						<Link href={SOCIAL_LINKS.github}>
-							<Button className="bg-background text-sm" variant="outline">
-								<HugeiconsIcon icon={GithubIcon} className="size-4" />
-								40k+
-							</Button>
-						</Link>
-						<Link href="/projects">
-							<Button className="text-sm">
-								Projects
-								<ArrowRight className="size-4" />
-							</Button>
-						</Link>
-						<ThemeToggle />
-					</div>
+					</Link>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="md:hidden"
+						onClick={() => setIsMenuOpen((open) => !open)}
+					>
+						<HugeiconsIcon icon={Menu02Icon} />
+					</Button>
 				</div>
-				<div
-					className={cn(
-						"bg-background/20 pointer-events-none fixed inset-0 opacity-0 backdrop-blur-3xl",
-						"transition-opacity duration-150",
-						isMenuOpen && "pointer-events-auto opacity-100",
-					)}
-				>
-					<div className="relative h-full">
-						<button
-							type="button"
-							aria-label="Close menu"
-							className="absolute inset-0"
-							onClick={closeMenu}
-							onKeyDown={(event) => {
-								if (
-									event.key === "Enter" ||
-									event.key === " " ||
-									event.key === "Escape"
-								) {
-									event.preventDefault();
-									closeMenu();
-								}
-							}}
-						/>
-						<nav className="flex flex-col gap-3 px-6 pt-[5rem]">
-							{links.map((link, index) => (
-								<motion.div
-									key={link.href}
-									initial={{ scale: 0.98, opacity: 0 }}
-									animate={{
-										scale: isMenuOpen ? 1 : 0.98,
-										opacity: isMenuOpen ? 1 : 0,
-									}}
-									transition={{
-										duration: 0.4,
-										delay: isMenuOpen ? index * 0.1 : 0,
-										ease: [0.25, 0.46, 0.45, 0.94],
-									}}
-								>
-									<Link
-										href={link.href}
-										className="text-2xl font-semibold"
-										onClick={() => setIsMenuOpen(false)}
-									>
-										{link.label}
-									</Link>
-								</motion.div>
-							))}
-						</nav>
-						<ThemeToggle
-							className="absolute right-8 bottom-8 size-10"
-							iconClassName="!size-[1.2rem]"
-							onToggle={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-							}}
-						/>
-					</div>
-				</div>
+			</div>
+
+			<div
+				className={cn(
+					"bg-background absolute top-full right-0 left-0 z-0 flex flex-col gap-2 border-b px-6 py-4 md:hidden",
+					!isMenuOpen && "hidden",
+				)}
+			>
+				{links.map((link) => (
+					<Link
+						key={link.href}
+						href={link.href}
+						onClick={closeMenu}
+						className="text-muted-foreground hover:text-foreground py-1 text-sm"
+					>
+						{link.label}
+					</Link>
+				))}
 			</div>
 		</header>
 	);

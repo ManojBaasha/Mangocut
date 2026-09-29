@@ -12,7 +12,7 @@ import { useElementSelection } from "@/hooks/timeline/element/use-element-select
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
-import { roundToFrame } from "opencut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 import { computeDropTarget } from "@/components/editor/panels/timeline/drop-target";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import { generateUUID } from "@/utils/id";

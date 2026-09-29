@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatTimecode, parseTimecode, snappedSeekTime, type FrameRate, type TimeCodeFormat } from "opencut-wasm";
+import { formatTimecode, parseTimecode, snappedSeekTime, type FrameRate, type TimeCodeFormat } from "mangocut-wasm";
 import { cn } from "@/utils/ui";
 
 interface EditableTimecodeProps {

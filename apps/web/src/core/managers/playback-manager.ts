@@ -1,6 +1,6 @@
 import type { EditorCore } from "@/core";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
-import { roundToFrame } from "opencut-wasm";
+import { roundToFrame } from "mangocut-wasm";
 
 export class PlaybackManager {
 	private isPlaying = false;

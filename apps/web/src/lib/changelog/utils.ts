@@ -1,7 +1,17 @@
-import { allChangelogs } from "content-collections";
+import { allChangelogs } from "./releases-data";
 
 export type Change = { type: string; text: string };
-export type Release = (typeof allChangelogs)[number];
+export type Release = {
+	version: string;
+	date: string;
+	published: boolean;
+	title: string;
+	description?: string;
+	summary?: string;
+	content: string;
+	isLatest: boolean;
+	changes: Change[];
+};
 
 type ChangeSectionConfig = {
 	title: string;

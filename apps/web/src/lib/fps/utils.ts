@@ -1,4 +1,4 @@
-import type { FrameRate } from "opencut-wasm";
+import type { FrameRate } from "mangocut-wasm";
 import type { MediaAsset } from "@/lib/media/types";
 
 type MediaAssetFpsInput = Pick<MediaAsset, "type" | "fps">;

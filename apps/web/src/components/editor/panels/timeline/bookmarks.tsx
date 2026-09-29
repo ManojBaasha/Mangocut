@@ -9,7 +9,7 @@ import {
 } from "./theme";
 import { TIMELINE_BOOKMARK_ROW_HEIGHT_PX } from "./layout";
 import { DEFAULT_FPS } from "@/lib/fps/defaults";
-import { snappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "mangocut-wasm";
 import {
 	ArrowTurnBackwardIcon,
 	Delete02Icon,

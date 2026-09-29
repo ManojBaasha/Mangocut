@@ -27,7 +27,7 @@ import {
 	resolveAnimationTarget,
 	resolveAnimationPathValueAtTime,
 } from "@/lib/animation";
-import { lastFrameTime } from "opencut-wasm";
+import { lastFrameTime } from "mangocut-wasm";
 import { BatchCommand } from "@/lib/commands";
 import {
 	AddTrackCommand,

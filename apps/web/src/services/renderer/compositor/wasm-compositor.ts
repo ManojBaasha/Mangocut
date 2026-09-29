@@ -5,7 +5,7 @@ import {
 	renderFrame,
 	resizeCompositor,
 	uploadTexture,
-} from "opencut-wasm";
+} from "mangocut-wasm";
 import type { FrameDescriptor } from "./types";
 
 function ensureOffscreenCanvas({

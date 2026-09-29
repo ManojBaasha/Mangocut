@@ -1,6 +1,6 @@
 "use client";
 
-import type { FrameRate } from "opencut-wasm";
+import type { FrameRate } from "mangocut-wasm";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
 import { formatRulerLabel } from "@/lib/timeline/ruler-utils";
 
