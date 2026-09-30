@@ -1,7 +1,10 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
+// Local/Electron monorepo builds trace from the repo root; Vercel deploys
+// only apps/web, so pointing outside the upload root doubles /vercel/path0.
 const repoRoot = path.join(__dirname, "../..");
+const tracingRoot = process.env.VERCEL ? __dirname : repoRoot;
 
 const nextConfig: NextConfig = {
 	compiler: {
@@ -10,9 +13,9 @@ const nextConfig: NextConfig = {
 	reactStrictMode: true,
 	productionBrowserSourceMaps: true,
 	output: "standalone",
-	outputFileTracingRoot: repoRoot,
+	outputFileTracingRoot: tracingRoot,
 	turbopack: {
-		root: repoRoot,
+		root: tracingRoot,
 	},
 	images: {
 		remotePatterns: [
