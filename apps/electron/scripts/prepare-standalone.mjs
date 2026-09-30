@@ -74,6 +74,13 @@ if (existsSync(publicDir)) {
 	cpSync(publicDir, path.join(outWeb, "public"), { recursive: true });
 }
 
+// Local secrets for packaged desktop tryouts (never commit .env.local)
+const envLocal = path.join(webRoot, ".env.local");
+if (existsSync(envLocal)) {
+	cpSync(envLocal, path.join(outWeb, ".env.local"));
+	console.log("Copied apps/web/.env.local into Electron Next resources");
+}
+
 const preparedServer = path.join(outWeb, "server.js");
 if (!existsSync(preparedServer)) {
 	console.error(`Expected ${preparedServer} after copy`);

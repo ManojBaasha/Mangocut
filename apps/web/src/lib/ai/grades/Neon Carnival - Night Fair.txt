@@ -1,0 +1,15 @@
+Neon Carnival - Night Fair / Amusement Park
+=============================================
+Best for: Carnivals, fairs, amusement parks, night markets, any night scene with colorful lights
+
+FFmpeg filter chain (standard):
+curves=r='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.92 1/1':g='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.9 1/1':b='0/0 0.08/0.0 0.2/0.12 0.5/0.54 0.85/0.93 1/1':m='0/0 0.06/0.0 0.18/0.08 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=-0.02:gs=-0.02:bs=0.04:rm=-0.01:gm=-0.01:bm=0.03:rh=0.0:gh=0.0:bh=0.02,eq=contrast=1.3:brightness=0.06:saturation=1.35,unsharp=5:5:0.6
+
+FFmpeg filter chain (darker - for bright/overlit scenes):
+curves=r='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.92 1/1':g='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.9 1/1':b='0/0 0.08/0.0 0.2/0.12 0.5/0.54 0.85/0.93 1/1':m='0/0 0.06/0.0 0.18/0.08 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=-0.02:gs=-0.02:bs=0.04:rm=-0.01:gm=-0.01:bm=0.03:rh=0.0:gh=0.0:bh=0.02,eq=contrast=1.35:brightness=-0.02:saturation=1.35,unsharp=5:5:0.6
+
+Notes:
+- Same base as Neon Rain but this is the reference for carnival/fair scenes
+- Use the darker variant for aerial/overhead shots of bright fairgrounds
+- The standard variant with brightness=0.06 works for ground-level shots
+- All ride colors (reds, blues, pinks, yellows) pop naturally

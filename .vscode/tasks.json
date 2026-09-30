@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Mangocut: AI desktop (dev:ai)",
+			"type": "shell",
+			"command": "bun run dev:ai",
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"ELECTRON_RUN_AS_NODE": ""
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true
+			},
+			"isBackground": true,
+			"runOptions": {
+				"instanceLimit": 1
+			}
+		}
+	]
+}

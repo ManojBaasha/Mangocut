@@ -14,6 +14,30 @@ export interface StorageAdapter<T> {
 	clear(): Promise<void>;
 }
 
+export interface VisionFrameMemory {
+	timeSeconds: number;
+	description: string;
+	capturedAt: string;
+}
+
+export interface MediaVisionMemory {
+	summary?: string;
+	updatedAt?: string;
+	frames?: VisionFrameMemory[];
+}
+
+export interface MediaTranscriptSegment {
+	start: number;
+	end: number;
+	text: string;
+}
+
+export interface MediaTranscriptMemory {
+	modelId: string;
+	segments: MediaTranscriptSegment[];
+	updatedAt: string;
+}
+
 export interface MediaAssetData {
 	id: string;
 	name: string;
@@ -27,6 +51,12 @@ export interface MediaAssetData {
 	hasAudio?: boolean;
 	ephemeral?: boolean;
 	thumbnailUrl?: string;
+	/** AI vision descriptions persisted across sessions. */
+	vision?: MediaVisionMemory;
+	/** Whisper transcript persisted so cut/caption tools can reuse it. */
+	transcript?: MediaTranscriptMemory;
+	/** Lightweight search tags derived from vision/transcript/name. */
+	tags?: string[];
 }
 
 export type SerializedScene = Omit<TScene, "createdAt" | "updatedAt"> & {

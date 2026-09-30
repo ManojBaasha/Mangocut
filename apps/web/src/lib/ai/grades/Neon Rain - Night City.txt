@@ -1,0 +1,21 @@
+Neon Rain - Night City Color Grade
+===================================
+Best for: Night city scenes, wet streets, neon reflections, urban night footage
+
+FFmpeg filter chain:
+curves=r='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.92 1/1':g='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.9 1/1':b='0/0 0.08/0.0 0.2/0.12 0.5/0.54 0.85/0.93 1/1':m='0/0 0.06/0.0 0.18/0.08 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=-0.02:gs=-0.02:bs=0.04:rm=-0.01:gm=-0.01:bm=0.03:rh=0.0:gh=0.0:bh=0.02,eq=contrast=1.3:brightness=0.06:saturation=1.35,unsharp=5:5:0.6
+
+Usage example:
+ffmpeg -i input.MOV -vf "curves=r='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.92 1/1':g='0/0 0.08/0.0 0.2/0.1 0.5/0.5 0.85/0.9 1/1':b='0/0 0.08/0.0 0.2/0.12 0.5/0.54 0.85/0.93 1/1':m='0/0 0.06/0.0 0.18/0.08 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=-0.02:gs=-0.02:bs=0.04:rm=-0.01:gm=-0.01:bm=0.03:rh=0.0:gh=0.0:bh=0.02,eq=contrast=1.3:brightness=0.06:saturation=1.35,unsharp=5:5:0.6" -c:v prores_ks -profile:v 1 -c:a copy output.MOV
+
+What it does:
+- Curves: Crushes blacks, slight blue lift in shadows/mids, clean highlights
+- Color balance: Subtle cool blue shift across all tones
+- EQ: Moderate contrast boost, brightness lift for night scenes, saturation boost to make neon/light reflections pop
+- Unsharp: Light sharpening for detail on wet surfaces
+
+Notes:
+- Works best on flat/log profile footage
+- Colorful light sources (neon signs, traffic lights, storefronts) will pop against the cool base
+- Wet surfaces amplify the effect with reflections
+- For drier scenes, consider reducing saturation from 1.35 to 1.2

@@ -866,6 +866,7 @@ export class TimelineManager {
 		this.previewOverlay.clear();
 		this.previewTracks = null;
 		this.editor.scenes.updateSceneTracks({ tracks: newTracks });
+		this.editor.shadow.noteFinalMutation();
 		this.notify();
 	}
 }

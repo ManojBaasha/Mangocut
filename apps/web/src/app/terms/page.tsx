@@ -37,30 +37,30 @@ export default function TermsPage() {
 					</AccordionTrigger>
 					<AccordionContent>
 						<h3 className="mb-3 text-lg font-medium">
-							You own your content, we own nothing.
+							You own your content. Use Mangocut responsibly.
 						</h3>
 						<ol className="list-decimal space-y-2 pl-6">
 							<li>
-								Everything runs locally in your browser - nothing is ever
-								uploaded to our servers
+								You retain ownership of the videos and projects you create
 							</li>
 							<li>
-								We never claim ownership of your content
+								Core editing stays on your device; cloud AI is optional and
+								subject to fair-use / trial limits
 							</li>
 							<li>
-								Free for personal and commercial use with no watermarks or
-								restrictions
-							</li>
-							<li>You're responsible for how you use it - don't break the law</li>
-							<li>
-								Service provided "as is" - we can't guarantee perfect uptime
+								Google sign-in is optional and used for account and AI
+								entitlement features
 							</li>
 							<li>
-								Open source means you can review our code and self-host if
-								needed
+								Don’t use Mangocut for illegal, harmful, or abusive activity
 							</li>
 							<li>
-								No account required - your exported videos are always yours
+								The service is provided “as is” — we can’t guarantee perfect
+								uptime or AI accuracy
+							</li>
+							<li>
+								Open-source components may be reviewed and self-hosted under
+								their licenses
 							</li>
 						</ol>
 						<p className="mt-4">
@@ -77,72 +77,115 @@ export default function TermsPage() {
 			</Accordion>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Your Content, Your Rights</h2>
+				<h2 className="text-2xl font-semibold">Agreement</h2>
 				<p>
-					<strong>You own everything you create.</strong> All editing and
-					processing happens locally on your device. We never see, store, or
-					have access to your files. We make no claims to ownership, licensing,
-					or rights over your videos, projects, or any content you create using
-					Mangocut.
+					By using Mangocut (including{" "}
+					<a
+						href="https://mangocut.jonam.dev"
+						className="text-primary hover:underline"
+					>
+						mangocut.jonam.dev
+					</a>
+					, the web editor, and the desktop app), you agree to these Terms of
+					Service and our{" "}
+					<a href="/privacy" className="text-primary hover:underline">
+						Privacy Policy
+					</a>
+					.
+				</p>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<h2 className="text-2xl font-semibold">Your content, your rights</h2>
+				<p>
+					<strong>You own everything you create.</strong> We make no claim to
+					ownership over your videos, projects, media, or exports. You are
+					responsible for having the rights to any media you import and for how
+					you use your finished work.
 				</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>
-						Your content never leaves your device
-					</li>
-					<li>You retain all intellectual property rights to your content</li>
-					<li>You can export and use your content however you choose</li>
-					<li>No watermarks, no licensing restrictions from Mangocut</li>
+					<li>You retain intellectual property rights to your content</li>
+					<li>You can export and use your content for personal or commercial purposes</li>
+					<li>Mangocut does not add ownership watermarks to your exports</li>
 				</ul>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">How You Can Use Mangocut</h2>
-				<p>Mangocut is free for personal and commercial use. You can:</p>
+				<h2 className="text-2xl font-semibold">Accounts &amp; Google sign-in</h2>
+				<p>
+					Some features—especially AI trial entitlements—may require or offer
+					Google sign-in. You must have the right to use the Google account you
+					connect, and you must provide accurate account information.
+				</p>
+				<p>
+					You are responsible for activity under your signed-in session. If you
+					believe your account access was compromised, sign out and contact us.
+				</p>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<h2 className="text-2xl font-semibold">AI features</h2>
+				<p>
+					Mangocut provides optional AI-assisted editing tools. Some run on your
+					device (for example local transcription). Others use cloud models:
+					when you use those features, prompts and related context you provide
+					may be sent to our AI providers to generate a response.
+				</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>
-						Create videos for personal, educational, or commercial purposes
-					</li>
+					<li>AI output can be wrong, incomplete, or unexpected—review edits before you rely on them</li>
+					<li>AI features may be rate-limited or offered as a free trial</li>
+					<li>We may change models, limits, or availability as the product evolves</li>
+					<li>Do not use AI features to generate or distribute illegal or abusive content</li>
+				</ul>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<h2 className="text-2xl font-semibold">Acceptable use</h2>
+				<p>You agree not to:</p>
+				<ul className="list-disc space-y-2 pl-6">
+					<li>Violate applicable laws or others’ rights</li>
+					<li>Attempt to bypass usage limits, authentication, or security controls</li>
+					<li>Abuse, overload, or disrupt Mangocut infrastructure or AI providers</li>
+					<li>Misrepresent your identity when signing in</li>
+					<li>Upload or process malware or content you do not have rights to use</li>
+				</ul>
+				<p>
+					We may suspend or limit access if we reasonably believe these terms
+					are being violated.
+				</p>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<h2 className="text-2xl font-semibold">How you can use Mangocut</h2>
+				<p>
+					Subject to these terms, Mangocut is available for personal and
+					commercial creative work. You may:
+				</p>
+				<ul className="list-disc space-y-2 pl-6">
+					<li>Create videos for personal, educational, or commercial purposes</li>
 					<li>Use Mangocut for client work and paid projects</li>
-					<li>Share and distribute videos created with Mangocut</li>
+					<li>Share and distribute videos you create with Mangocut</li>
 					<li>
-						Modify and distribute the Mangocut software (under MIT license)
+						Use and modify open-source Mangocut software under its applicable
+						license (for example MIT where that license applies)
 					</li>
 				</ul>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<h2 className="text-2xl font-semibold">Service availability</h2>
 				<p>
-					You're responsible for how you use Mangocut and the content you create.
-					Don't use it for anything illegal in your jurisdiction.
+					Mangocut is provided “as is” and “as available” without warranties of
+					any kind to the fullest extent permitted by law. We do not guarantee
+					uninterrupted service, perfect AI results, or that local browser
+					storage will never be lost.
 				</p>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">AI Features</h2>
+				<h2 className="text-2xl font-semibold">Open source</h2>
 				<p>
-					AI features like auto captions run entirely in your browser using
-					on-device models. No content is uploaded to any server. These features
-					are optional - you can use Mangocut without them.
-				</p>
-			</section>
-
-			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Service</h2>
-				<p>
-					Mangocut does not currently require an account. The service is provided
-					"as is" without warranties. While we strive for reliability, we can't
-					guarantee uninterrupted service.
-				</p>
-			</section>
-
-			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Open Source Benefits</h2>
-				<p>Because Mangocut is open source, you have additional rights:</p>
-				<ul className="list-disc space-y-2 pl-6">
-					<li>Review our code to see exactly how we handle your data</li>
-					<li>Self-host Mangocut on your own servers</li>
-					<li>Modify the software to suit your needs</li>
-					<li>Contribute improvements back to the community</li>
-				</ul>
-				<p>
-					View our source code and license on{" "}
+					Parts of Mangocut are open source. Review the code and license on{" "}
 					<a
 						href={SOCIAL_LINKS.github}
 						target="_blank"
@@ -151,52 +194,51 @@ export default function TermsPage() {
 					>
 						GitHub
 					</a>
-					.
+					. Self-hosting or modifying the software is subject to the relevant
+					license terms and does not create a support obligation for us.
 				</p>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Limitations and Liability</h2>
-				<p>
-					Mangocut is provided free of charge. To the extent permitted by law:
-				</p>
+				<h2 className="text-2xl font-semibold">Limitations of liability</h2>
+				<p>To the extent permitted by law:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>We're not liable for any loss of data or content</li>
+					<li>We are not liable for loss of local projects, media, or exports</li>
 					<li>
-						Projects are stored in your browser and may be lost if you clear
-						browser data
+						Projects stored in your browser or on your machine may be lost if
+						you clear data, reinstall, or experience device failure
 					</li>
-					<li>We're not responsible for how you use the service</li>
-					<li>Our liability is limited to the maximum extent allowed by law</li>
+					<li>We are not responsible for how you use the service or AI output</li>
+					<li>Our aggregate liability is limited to the maximum extent allowed by law</li>
 				</ul>
 				<p>
-					Since your content stays on your device, we have no way to recover
-					lost projects. Consider exporting important videos when finished
-					editing.
+					Export important work when you finish editing. We cannot recover local
+					projects from your device.
 				</p>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Service Changes</h2>
+				<h2 className="text-2xl font-semibold">Changes</h2>
 				<p>We may update Mangocut and these terms:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>We'll notify you of significant changes to these terms</li>
-					<li>Continued use means you accept any updates</li>
-					<li>You can always self-host an older version if you prefer</li>
-					<li>Major changes will be discussed with the community on GitHub</li>
+					<li>Material changes will be reflected by updating the date below</li>
+					<li>Continued use after changes means you accept the updated terms</li>
+					<li>You can stop using the service if you do not agree</li>
 				</ul>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Stopping Use</h2>
+				<h2 className="text-2xl font-semibold">Stopping use</h2>
 				<p>You can stop using Mangocut at any time:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>Clear your browser data to remove local projects</li>
+					<li>Sign out of Google authentication</li>
+					<li>Clear browser or app data to remove local projects</li>
+					<li>Uninstall the desktop app if installed</li>
 				</ul>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Contact Us</h2>
+				<h2 className="text-2xl font-semibold">Contact us</h2>
 				<p>Questions about these terms or need to report an issue?</p>
 				<p>
 					Contact us through our{" "}
@@ -228,13 +270,12 @@ export default function TermsPage() {
 				</p>
 				<p>
 					These terms are governed by applicable law in your jurisdiction. We
-					prefer to resolve disputes through friendly discussion in our
-					open-source community.
+					prefer to resolve disputes through discussion when possible.
 				</p>
 			</section>
 			<Separator />
 			<p className="text-muted-foreground text-sm">
-				Last updated: March 15, 2026
+				Last updated: September 30, 2026
 			</p>
 		</BasePage>
 	);

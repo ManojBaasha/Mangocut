@@ -4,18 +4,75 @@ const fs = require("node:fs");
 const http = require("node:http");
 const net = require("node:net");
 const path = require("node:path");
+const { registerAiIpc } = require("./ai/ipc");
 
-/** Fixed port so NEXT_PUBLIC_SITE_URL stays valid in packaged builds. */
-const PRODUCTION_PORT = 47823;
+/** Same port as local AI desktop so Google OAuth redirect URIs stay aligned. */
+const PRODUCTION_PORT = Number(process.env.MANGOCUT_DESKTOP_PORT || 3045);
 const DEV_URL = process.env.MANGOCUT_DEV_URL || "http://127.0.0.1:3000";
 const START_PATH = "/projects";
 
 let mainWindow = null;
 let nextProcess = null;
 let isQuitting = false;
+let fileEnvCache = null;
 
 function isDev() {
 	return !app.isPackaged;
+}
+
+function parseEnvFile(filePath) {
+	if (!fs.existsSync(filePath)) {
+		return {};
+	}
+
+	const out = {};
+	const text = fs.readFileSync(filePath, "utf8");
+	for (const rawLine of text.split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#")) continue;
+		const eq = line.indexOf("=");
+		if (eq <= 0) continue;
+		const key = line.slice(0, eq).trim();
+		let value = line.slice(eq + 1).trim();
+		if (
+			(value.startsWith('"') && value.endsWith('"')) ||
+			(value.startsWith("'") && value.endsWith("'"))
+		) {
+			value = value.slice(1, -1);
+		}
+		out[key] = value;
+	}
+	return out;
+}
+
+function loadDesktopFileEnv() {
+	if (fileEnvCache) {
+		return fileEnvCache;
+	}
+
+	const candidates = [];
+	if (isDev()) {
+		candidates.push(path.join(__dirname, "../../web/.env.local"));
+		candidates.push(path.join(__dirname, "../../web/.env"));
+	} else {
+		candidates.push(
+			path.join(process.resourcesPath, "next", "apps", "web", ".env.local"),
+		);
+		candidates.push(
+			path.join(process.resourcesPath, "next", "apps", "web", ".env"),
+		);
+		try {
+			candidates.push(path.join(app.getPath("userData"), ".env.local"));
+		} catch {
+			// app may not be ready yet in some call sites
+		}
+	}
+
+	fileEnvCache = {};
+	for (const candidate of candidates) {
+		Object.assign(fileEnvCache, parseEnvFile(candidate));
+	}
+	return fileEnvCache;
 }
 
 function getNextServerEntry() {
@@ -92,16 +149,34 @@ function findFreePort() {
 }
 
 function desktopEnv({ port, origin }) {
-	return {
+	const fileEnv = loadDesktopFileEnv();
+	const merged = {
+		...fileEnv,
 		...process.env,
+	};
+
+	return {
+		...merged,
 		ELECTRON_RUN_AS_NODE: "1",
 		NODE_ENV: "production",
 		MANGOCUT_DESKTOP: "1",
 		HOSTNAME: "127.0.0.1",
 		PORT: String(port),
 		NEXT_PUBLIC_SITE_URL: origin,
-		FREESOUND_CLIENT_ID: process.env.FREESOUND_CLIENT_ID || "",
-		FREESOUND_API_KEY: process.env.FREESOUND_API_KEY || "",
+		// Packaged app origin must match Google OAuth redirect + Better Auth baseURL
+		BETTER_AUTH_URL: origin,
+		FREESOUND_CLIENT_ID:
+			merged.FREESOUND_CLIENT_ID || process.env.FREESOUND_CLIENT_ID || "",
+		FREESOUND_API_KEY:
+			merged.FREESOUND_API_KEY || process.env.FREESOUND_API_KEY || "",
+		GOOGLE_CLIENT_ID: merged.GOOGLE_CLIENT_ID || "",
+		GOOGLE_CLIENT_SECRET: merged.GOOGLE_CLIENT_SECRET || "",
+		BETTER_AUTH_SECRET: merged.BETTER_AUTH_SECRET || "",
+		BETTER_AUTH_API_KEY: merged.BETTER_AUTH_API_KEY || "",
+		OPENROUTER_API_KEY: merged.OPENROUTER_API_KEY || "",
+		OPENROUTER_ALLOWED_MODELS: merged.OPENROUTER_ALLOWED_MODELS || "",
+		AI_TRIAL_CHAT_TURNS: merged.AI_TRIAL_CHAT_TURNS || "50",
+		AI_REQUIRE_AUTH: merged.AI_REQUIRE_AUTH || "false",
 	};
 }
 
@@ -110,6 +185,20 @@ async function startNextServer() {
 	const port = PRODUCTION_PORT;
 	const origin = `http://127.0.0.1:${port}`;
 	const cwd = path.dirname(serverEntry);
+
+	const free = await new Promise((resolve) => {
+		const server = net.createServer();
+		server.once("error", () => resolve(false));
+		server.once("listening", () => {
+			server.close(() => resolve(true));
+		});
+		server.listen(port, "127.0.0.1");
+	});
+	if (!free) {
+		throw new Error(
+			`Port ${port} is already in use. Quit the other Mangocut / AI desktop instance, then reopen the app. Google sign-in requires http://127.0.0.1:${port}.`,
+		);
+	}
 
 	nextProcess = spawn(process.execPath, [serverEntry], {
 		cwd,
@@ -195,6 +284,10 @@ function stopNextServer() {
 }
 
 app.whenReady().then(async () => {
+	registerAiIpc({
+		getMainWindow: () => mainWindow,
+	});
+
 	try {
 		const origin = await resolveAppOrigin();
 		createWindow(origin);

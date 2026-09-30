@@ -29,4 +29,6 @@ target/
 # Electron
 apps/electron/dist/
 apps/electron/resources/next/
-apps/electron/resources/next/**
+
+# AI desktop watcher trigger/logs (local only)
+script/triggers/

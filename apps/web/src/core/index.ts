@@ -10,9 +10,22 @@ import { AudioManager } from "./managers/audio-manager";
 import { SelectionManager } from "./managers/selection-manager";
 import { ClipboardManager } from "./managers/clipboard-manager";
 import { DiagnosticsManager } from "./managers/diagnostics-manager";
+import { ShadowManager } from "./managers/shadow-manager";
 import { registerDefaultEffects } from "@/lib/effects";
 import { registerDefaultMasks } from "@/lib/masks";
 import { registerTranscriptionDiagnostics } from "@/lib/transcription/diagnostics";
+import {
+	clearCommandRegistry,
+	isCommandRegistered,
+	registerEditorCommands,
+	setShadowCommandGuard,
+} from "@/lib/commands-api";
+import { registerFsCommands } from "@/lib/commands-api/register-fs-commands";
+import { registerFfmpegCommands } from "@/lib/commands-api/register-ffmpeg-commands";
+import { registerVisionCommands } from "@/lib/commands-api/register-vision-commands";
+import { registerTranscriptionCommands } from "@/lib/commands-api/register-transcription-commands";
+import { registerMemoryCommands } from "@/lib/commands-api/register-memory-commands";
+import { registerAgentMetaCommands } from "@/lib/commands-api/register-agent-meta-commands";
 
 export class EditorCore {
 	private static instance: EditorCore | null = null;
@@ -28,6 +41,7 @@ export class EditorCore {
 	public readonly selection: SelectionManager;
 	public readonly clipboard: ClipboardManager;
 	public readonly diagnostics: DiagnosticsManager;
+	public readonly shadow: ShadowManager;
 
 	private constructor() {
 		registerDefaultEffects();
@@ -44,6 +58,7 @@ export class EditorCore {
 		this.selection = new SelectionManager(this);
 		this.clipboard = new ClipboardManager(this);
 		this.diagnostics = new DiagnosticsManager(this);
+		this.shadow = new ShadowManager(this);
 		registerTranscriptionDiagnostics({ diagnostics: this.diagnostics });
 		this.playback.bindTimelineScope();
 		this.command.registerReactor(() => {
@@ -66,6 +81,32 @@ export class EditorCore {
 			}
 		});
 		this.save.start();
+		setShadowCommandGuard({
+			guard: () => {
+				if (this.shadow.isFinalDiverged()) {
+					throw new Error(
+						"Final timeline changed while AI Preview exists. Accept, Reject, or Reset preview before continuing.",
+					);
+				}
+			},
+		});
+		if (!isCommandRegistered({ name: "get_project_summary" })) {
+			registerEditorCommands({ editor: this });
+			registerFsCommands({ editor: this });
+			registerFfmpegCommands({ editor: this });
+		}
+		if (!isCommandRegistered({ name: "describe_media" })) {
+			registerVisionCommands({ editor: this });
+		}
+		if (!isCommandRegistered({ name: "transcribe_media" })) {
+			registerTranscriptionCommands({ editor: this });
+		}
+		if (!isCommandRegistered({ name: "search_media" })) {
+			registerMemoryCommands({ editor: this });
+		}
+		if (!isCommandRegistered({ name: "propose_edit_plan" })) {
+			registerAgentMetaCommands({ editor: this });
+		}
 	}
 
 	static getInstance(): EditorCore {
@@ -76,6 +117,7 @@ export class EditorCore {
 	}
 
 	static reset(): void {
+		clearCommandRegistry();
 		EditorCore.instance = null;
 	}
 }

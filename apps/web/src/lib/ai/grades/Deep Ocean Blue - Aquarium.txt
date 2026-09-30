@@ -1,0 +1,18 @@
+Deep Ocean Blue - Aquarium / Blue Ambient Light
+=================================================
+Best for: Aquarium scenes, blue-lit environments, underwater projections, immersive exhibits
+
+FFmpeg filter chain:
+curves=r='0/0 0.12/0.0 0.2/0.08 0.5/0.5 1/1':g='0/0 0.12/0.0 0.2/0.08 0.5/0.5 1/1':b='0/0 0.12/0.0 0.2/0.1 0.5/0.58 1/1':m='0/0 0.1/0.0 0.2/0.08 0.4/0.35 0.6/0.65 0.9/0.95 1/1',colorbalance=rs=-0.08:gs=-0.04:bs=0.05:rm=-0.1:gm=-0.04:bm=0.15:rh=-0.08:gh=-0.02:bh=0.12,eq=contrast=1.35:brightness=0.02:saturation=1.4,colortemperature=temperature=4000,unsharp=5:5:0.8
+
+What it does:
+- Curves: Crushes blacks to true black (key for silhouettes), blue channel lifted in mids
+- Color balance: Heavy blue push in mids/highlights, red/green suppressed
+- EQ: Strong contrast, slight brightness lift, high saturation for vivid blue
+- Color temp: Cooled to 4000K for blue push
+- Unsharp: Strong sharpening for detail in projection/glass
+
+Notes:
+- True blacks preserved — silhouettes stay black, not blue
+- Works best when there's a strong blue ambient light source
+- For underwater-only shots, increase contrast to 1.5 and reduce brightness to -0.03

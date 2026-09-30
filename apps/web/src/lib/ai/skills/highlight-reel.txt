@@ -1,0 +1,8 @@
+Highlight reel / Shorts skill for Mangocut AI.
+
+1. propose_edit_plan: find_highlights → package_highlights → captions → verify duration.
+2. Transcribe the source interview/vlog if needed.
+3. find_highlights with maxClips 3 and targetSeconds ~30–45.
+4. package_highlights onto AI Preview.
+5. insert_captions if speech-heavy.
+6. assert_edit_quality; report clip quotes to the user for Accept.

@@ -13,6 +13,10 @@ const webEnvSchema = z.object({
 	// Optional cloud sounds search — empty disables the Freesound API.
 	FREESOUND_CLIENT_ID: z.string().default(""),
 	FREESOUND_API_KEY: z.string().default(""),
+
+	/** Server-only OpenRouter key for Mangocut AI proxy. */
+	OPENROUTER_API_KEY: z.string().default(""),
+	OPENROUTER_ALLOWED_MODELS: z.string().default(""),
 });
 
 export type WebEnv = z.infer<typeof webEnvSchema>;

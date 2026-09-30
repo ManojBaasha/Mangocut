@@ -1,0 +1,8 @@
+Talking-head cleanup skill for Mangocut AI.
+
+1. propose_edit_plan with steps: transcribe → remove fillers → cut silence gaps → captions optional → verify.
+2. Prefer search_media / get_project_summary to find the interview clip.
+3. place_media if not on timeline.
+4. transcribe_media, then remove_filler_words / cut_on_speech keep_speech.
+5. assert_edit_quality + inspect_playhead near mid-talking section.
+6. Summarize for the user; they Accept AI Preview.

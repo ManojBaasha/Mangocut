@@ -1,0 +1,19 @@
+Blue Sky - Daytime Scenic / Golden Hour Fix
+=============================================
+Best for: Daytime outdoor scenes, golden hour footage, bridges, landscapes, coastal views
+
+FFmpeg filter chain:
+curves=r='0/0 0.12/0.04 0.5/0.42 0.85/0.82 1/0.9':g='0/0 0.12/0.05 0.5/0.5 0.85/0.9 1/0.98':b='0/0 0.12/0.08 0.5/0.56 0.85/0.94 1/1':m='0/0 0.08/0.02 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=-0.06:gs=-0.02:bs=0.06:rm=-0.04:gm=-0.01:bm=0.04:rh=-0.04:gh=0.0:bh=0.03,eq=contrast=1.28:brightness=0.03:saturation=1.15,unsharp=5:5:0.5
+
+What it does:
+- Curves: Red channel CAPPED at 0.9 in highlights — kills the warm/golden cast
+- Blue channel fully open to 1.0 — sky goes blue
+- Green channel slightly capped at 0.98 — removes green cast from log footage
+- Color balance: Cool push across all tones
+- EQ: Moderate contrast, low saturation (1.15) to avoid oversaturation
+
+CRITICAL — DO NOT use colortemperature filter on golden hour footage:
+- colortemperature on warm footage creates pink/magenta casts
+- Instead, use curves to manually pull down the red channel
+- This preserves actual red objects (like the Golden Gate Bridge) while cooling the sky/water
+- The key insight: curve-based WB correction > colortemperature filter for warm source footage

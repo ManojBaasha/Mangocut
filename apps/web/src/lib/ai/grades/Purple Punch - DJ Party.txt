@@ -1,0 +1,18 @@
+Purple Punch - DJ / Party / Club
+==================================
+Best for: Indoor parties, DJ sets, club scenes, laser/light shows, purple/pink ambient lighting
+
+FFmpeg filter chain:
+curves=r='0/0 0.1/0.03 0.5/0.48 0.85/0.9 1/1':g='0/0 0.1/0.02 0.5/0.42 0.85/0.84 1/1':b='0/0 0.1/0.04 0.5/0.52 0.85/0.92 1/1':m='0/0 0.08/0.02 0.5/0.52 0.85/0.94 1/1',colorbalance=rs=0.04:gs=-0.04:bs=0.06:rm=0.03:gm=-0.03:bm=0.04:rh=0.02:gh=-0.02:bh=0.03,eq=contrast=1.35:brightness=0.04:saturation=1.4,unsharp=5:5:0.6
+
+What it does:
+- Curves: Green channel suppressed (0.84 max) for purple/magenta lean, blue lifted
+- Color balance: Red+blue pushed (=purple), green pulled across all tones
+- EQ: Strong contrast to separate people from haze, high saturation for vivid lights
+- Unsharp: Good sharpening to cut through smoke/haze
+
+Notes:
+- Works with purple, pink, and blue ambient lighting
+- The green suppression is what makes it purple rather than blue
+- For redder club lighting, increase rs/rm values and decrease bs/bm slightly
+- Smoke/haze machines add atmosphere — the contrast boost helps cut through it

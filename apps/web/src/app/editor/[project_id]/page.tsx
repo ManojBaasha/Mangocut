@@ -22,7 +22,7 @@ import { useEditor } from "@/hooks/use-editor";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
-import { ChangelogNotification } from "@/lib/changelog/components/changelog-notification";
+import { AiChatSidebar } from "@/components/editor/panels/ai-chat";
 
 export default function Editor() {
 	const params = useParams();
@@ -34,12 +34,14 @@ export default function Editor() {
 				<div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
 					<DegradedRendererBanner />
 					<EditorHeader />
-					<div className="min-h-0 min-w-0 flex-1">
-						<EditorLayout />
+					<div className="flex min-h-0 min-w-0 flex-1">
+						<div className="min-h-0 min-w-0 flex-1">
+							<EditorLayout />
+						</div>
+						<AiChatSidebar />
 					</div>
 					<Onboarding />
 					<MigrationDialog />
-					<ChangelogNotification />
 				</div>
 			</EditorProvider>
 		</MobileGate>

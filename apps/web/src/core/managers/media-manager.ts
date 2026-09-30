@@ -1,6 +1,10 @@
 import type { EditorCore } from "@/core";
 import { toast } from "sonner";
 import type { MediaAsset } from "@/lib/media/types";
+import type {
+	MediaTranscriptMemory,
+	MediaVisionMemory,
+} from "@/services/storage/types";
 import { storageService } from "@/services/storage/service";
 import { generateUUID } from "@/utils/id";
 import { videoCache } from "@/services/video-cache/service";
@@ -138,9 +142,56 @@ export class MediaManager {
 		return this.assets;
 	}
 
+	getAsset({ id }: { id: string }): MediaAsset | null {
+		return this.assets.find((asset) => asset.id === id) ?? null;
+	}
+
 	setAssets({ assets }: { assets: MediaAsset[] }): void {
 		this.assets = assets;
 		this.notify();
+	}
+
+	async updateAssetMemory({
+		projectId,
+		mediaId,
+		vision,
+		transcript,
+		tags,
+	}: {
+		projectId: string;
+		mediaId: string;
+		vision?: MediaVisionMemory;
+		transcript?: MediaTranscriptMemory;
+		tags?: string[];
+	}): Promise<MediaAsset | null> {
+		const index = this.assets.findIndex((asset) => asset.id === mediaId);
+		if (index < 0) return null;
+		const current = this.assets[index];
+		const next: MediaAsset = {
+			...current,
+			...(vision !== undefined ? { vision } : {}),
+			...(transcript !== undefined ? { transcript } : {}),
+			...(tags !== undefined ? { tags } : {}),
+		};
+		this.assets = [
+			...this.assets.slice(0, index),
+			next,
+			...this.assets.slice(index + 1),
+		];
+		this.notify();
+		try {
+			await storageService.saveMediaAsset({ projectId, mediaAsset: next });
+			return next;
+		} catch (error) {
+			console.error("Failed to persist media memory:", error);
+			this.assets = [
+				...this.assets.slice(0, index),
+				current,
+				...this.assets.slice(index + 1),
+			];
+			this.notify();
+			return null;
+		}
 	}
 
 	isLoadingMedia(): boolean {

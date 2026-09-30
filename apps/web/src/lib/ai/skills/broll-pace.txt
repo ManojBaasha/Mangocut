@@ -1,0 +1,7 @@
+B-roll pacing skill for Mangocut AI.
+
+1. search_media for each beat the user describes.
+2. place_media in story order with short durations.
+3. Optional list_grades / apply_grade for look consistency.
+4. inspect_playhead on each cut; assert_edit_quality.
+5. Keep narration audio if present; don't overwrite without asking.

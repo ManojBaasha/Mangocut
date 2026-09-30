@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "../ui/button";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -24,8 +24,21 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "./dialogs/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
+import { useAiChatStore } from "@/stores/ai-chat-store";
+import { isMangocutDesktop } from "@/lib/ai/desktop";
+import { authClient } from "@/lib/auth/client";
+import { Sparkles } from "lucide-react";
 
 export function EditorHeader() {
+	const toggleOpen = useAiChatStore((s) => s.toggleOpen);
+	const isAiOpen = useAiChatStore((s) => s.isOpen);
+	const [showAi, setShowAi] = useState(false);
+	const session = authClient.useSession();
+
+	useEffect(() => {
+		setShowAi(isMangocutDesktop() || Boolean(session.data?.user));
+	}, [session.data?.user]);
+
 	return (
 		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
 			<div className="flex items-center gap-1">
@@ -33,6 +46,17 @@ export function EditorHeader() {
 				<EditableProjectName />
 			</div>
 			<nav className="flex items-center gap-2">
+				{showAi ? (
+					<Button
+						variant={isAiOpen ? "secondary" : "ghost"}
+						size="sm"
+						className="gap-1.5"
+						onClick={() => toggleOpen()}
+					>
+						<Sparkles className="size-4" />
+						AI
+					</Button>
+				) : null}
 				<ExportButton />
 				<ThemeToggle />
 			</nav>
