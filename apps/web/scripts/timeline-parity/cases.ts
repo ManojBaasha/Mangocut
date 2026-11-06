@@ -68,7 +68,53 @@ const simpleScene: SceneTracks = scene({
 	} as SceneTracks["main"],
 });
 
+const overlayScene: SceneTracks = scene({
+	overlay: [
+		{
+			id: "text-1",
+			name: "Text track",
+			type: "text",
+			elements: [],
+			hidden: false,
+		},
+	] as SceneTracks["overlay"],
+	main: simpleScene.main,
+	audio: [
+		{
+			id: "audio-1",
+			name: "Audio track",
+			type: "audio",
+			elements: [],
+			muted: false,
+		},
+	] as SceneTracks["audio"],
+});
+
 export const cases: ParityCase[] = [
+	{
+		name: "add_track_video_default",
+		input: overlayScene,
+		op: { type: "addTrack", trackType: "video" },
+		newIds: ["new-track"],
+	},
+	{
+		name: "add_track_audio_index_0",
+		input: overlayScene,
+		op: { type: "addTrack", trackType: "audio", index: 0 },
+		newIds: ["new-track"],
+	},
+	{
+		name: "remove_track_overlay",
+		input: overlayScene,
+		op: { type: "removeTrack", trackId: "text-1" },
+		newIds: [],
+	},
+	{
+		name: "toggle_visibility_text",
+		input: overlayScene,
+		op: { type: "toggleTrackVisibility", trackId: "text-1" },
+		newIds: [],
+	},
 	{
 		name: "toggle_mute_main",
 		input: simpleScene,
