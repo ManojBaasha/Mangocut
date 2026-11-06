@@ -1,7 +1,7 @@
 # Mangocut Agent Engine — Design
 
 Date: 2026-11-05
-Status: draft, awaiting approval
+Status: final draft, awaiting user approval
 Supersedes the agent loop in `2026-09-29-mangocut-ai-agent-design.md` (the Command API and AI Preview ideas carry over; the loop, prompt and chat plumbing are replaced).
 
 ## 1. Intent
@@ -37,7 +37,6 @@ The user picked opencode (github.com/anomalyco/opencode) as the reference becaus
 - Output quality tuning. Rough edits are acceptable; quality improves in later iterations.
 - Cost caps. Token spend is not a constraint.
 - Cloud execution, multi-user collaboration, mobile.
-- Porting the timeline model to Rust in this project (see §5.3).
 
 ### Anti-goal (the red line)
 
@@ -52,6 +51,7 @@ The user picked opencode (github.com/anomalyco/opencode) as the reference becaus
 - No cost limits.
 - Completion over quality (anti-goal above).
 - Approved the calls in §4 as stated in conversation.
+- Timeline logic in Rust, per AGENTS.md (chosen over a TypeScript package after weighing both).
 
 ## 4. Architecture (builder's calls, approved by the user in conversation)
 
@@ -118,13 +118,19 @@ The current `ShadowManager` (one in-memory clone of `SceneTracks`) is replaced b
 - Media the agent creates (renders, grades, downloads) lives under `.mangocut/renders/` and is referenced by branch timelines; it only becomes part of the main project's media index on Accept. This fixes today's leak where `apply_grade` and `import_media_paths` persist assets before Accept.
 - If main changes after a branch was created, the branch records its `baseRevision`; Accept applies the branch's scene state wholesale and warns that manual edits made to main since the branch was cut will be overwritten (same semantics as today's divergence guard, made explicit). Three-way merge is out of scope.
 
-### 4.5 Timeline logic becomes a headless package
+### 4.5 Timeline logic becomes a Rust crate (user's decision)
 
-The engine must edit timelines without a browser. Timeline operations currently sit in `apps/web/src/lib/timeline`, `lib/commands-api/register-*-commands.ts` and the `EditorCore` managers, mixed with React stores and DOM APIs.
+The engine must edit timelines without a browser. Timeline operations currently sit in `apps/web/src/lib/timeline`, `lib/commands-api/register-*-commands.ts` and the `EditorCore` managers, mixed with React stores and DOM APIs. Per AGENTS.md and the user's decision, they move into Rust.
 
-- Extract a framework-free TypeScript package, `packages/timeline-core`: the project/scene/track/element types, pure operations (insert, trim, split, move, ripple, retime, crop/transform, text, effects, masks, grade metadata), validation, and duration/time math (`mangocut-wasm` ticks stays as the time base).
-- Both the renderer (`EditorCore`) and the engine plugin call `timeline-core`. The renderer wraps operations in undoable commands; the engine applies them to branch files.
-- No DOM, React, Zustand, Next or Electron imports in `timeline-core`.
+- New crate **`rust/crates/timeline`**: the project/scene/track/element model (serde), validation of invariants (no illegal overlaps, trims within source bounds, valid tracks per element type), and pure operations: insert, trim, split, move, delete, ripple, retime, transform/crop, canvas/aspect, text, effects, masks, layout presets, batch apply. Operations take a project (or scene) and return a new one plus a structured change summary; no hidden state.
+- The ffmpeg **preview filter-graph generator** (§5.2 seeing tools) also lives in this crate, so engine renders derive from the same model.
+- Exposed through the existing `bridge` `#[export]` macro. TypeScript types are generated with `tsify-next` (already used by `rust/crates/time`); hand-written TS timeline types are replaced by the generated ones.
+- **Two WebAssembly builds:**
+  - Browser: the existing `mangocut-wasm` (`rust/wasm`) adds the timeline exports.
+  - Node: a new, GPU-free build (`rust/wasm-node` or a cargo feature that excludes `gpu`/`web-sys`) loaded by the engine utility process. Native napi add-ons are not used.
+- **Build from source in this repo.** `apps/web` currently consumes the published `opencut-wasm@^0.2.5` from npm. Both wasm builds switch to local workspace builds (wasm-pack), wired into the dev and Electron packaging scripts, so Rust changes reach the renderer and engine without a publish step.
+- **Renderer integration:** `EditorCore` calls wasm operations for every timeline mutation. Undo wraps each call as a before/after snapshot command (the existing `TracksSnapshotCommand` pattern), so the undo system does not need to understand individual operations.
+- Migration is incremental per operation, behind the same call sites, with parity tests comparing the old TS operation and the Rust one on recorded fixtures until the TS version is deleted. Agent tools only ever call the Rust operations.
 
 ### 4.6 Models
 
@@ -161,11 +167,11 @@ Namespace `mc_` (opencode flattens `<namespace>_<tool>`). Every tool takes zod i
 - **Output:** `export_preview` (full low-res render of a branch for the judge and the user).
 - **Skills:** opencode's `skill` tool over `SKILL.md` packs: `beat-match-recreation`, `grade-exploration`, `talking-head-cleanup`, `highlight-reel`, `broll-pace` (the last three migrated from today's `.txt` packs).
 
-Engine-side rendering uses ffmpeg with a filter graph generated from the branch timeline by `timeline-core`. It is a preview renderer for the agent's eyes and the judge; the renderer's GPU compositor stays authoritative for playback and final export. Divergence between the two is acceptable for this project as long as cuts, timing, crops and grades are recognisable.
+Engine-side rendering uses ffmpeg with a filter graph generated from the branch timeline by the Rust timeline crate. It is a preview renderer for the agent's eyes and the judge; the renderer's GPU compositor stays authoritative for playback and final export. Divergence between the two is acceptable for this project as long as cuts, timing, crops and grades are recognisable.
 
 ### 5.3 Rust (AGENTS.md)
 
-AGENTS.md makes `rust/` the home of non-UI logic. This project keeps the engine plugin and `timeline-core` in TypeScript because opencode is TypeScript and in-process plugins are the integration point. `timeline-core` is deliberately framework-free so it can later be backed by or replaced with a Rust crate exported through the existing `bridge` `#[export]` path. This is a builder's call, flagged for the user.
+Timeline model, operations and preview render-graph generation are Rust (§4.5), per the user's decision. The opencode host, the Mangocut plugin and its tools stay TypeScript because opencode plugins are in-process TypeScript; tools are thin adapters that validate input, call the Rust operation through wasm, persist the branch, and shape the result for the model. Analysis helpers (beat/shot detection) may be Rust or external binaries; left to the builder.
 
 ### 5.4 Grades (builder's call)
 
@@ -206,7 +212,7 @@ Checked-in fixtures (short, license-clean reference track and clips) and scripte
 
 Pass criterion: each job reaches judge verdict `done` (re-arms by the supervisor allowed, user intervention not) with a branch containing the expected structure (e.g. cut points within ±1 frame of detected beats for job 1; ≥3 branches for job 3), in **5 of 5 consecutive runs** per job. Output quality is not graded.
 
-Plus unit tests for `timeline-core` operations, the filesystem storage adapter, branch Accept/Reject, and every tool's error paths.
+Plus `cargo test` for the Rust timeline crate operations, TS/Rust parity tests during migration, the filesystem storage adapter, branch Accept/Reject, and every tool's error paths.
 
 ## 7. UI changes (renderer)
 
@@ -218,9 +224,9 @@ Plus unit tests for `timeline-core` operations, the filesystem storage adapter, 
 
 ## 8. Migration of existing code
 
-- `lib/commands-api` handlers: logic moves into `timeline-core` operations and Mangocut tools. The Command API remains for UI actions (keyboard shortcuts etc.) on the renderer.
+- `lib/commands-api` handlers: logic moves into the Rust timeline crate operations and Mangocut tools. The Command API remains for UI actions (keyboard shortcuts etc.) on the renderer.
 - Electron `ai/ipc.js` ffmpeg/fs handlers move into the engine (ffmpeg runs in the engine process).
-- Phase 2/6 features (Whisper transcription, filler removal, highlights, search_media/tags) are re-exposed as tools; their pure logic moves into `timeline-core` or an `engine/analysis` module.
+- Phase 2/6 features (Whisper transcription, filler removal, highlights, search_media/tags) are re-exposed as tools; their pure logic moves into the Rust timeline crate or an `engine/analysis` module.
 
 ## 9. Constraints
 
@@ -231,7 +237,7 @@ Plus unit tests for `timeline-core` operations, the filesystem storage adapter, 
 
 ## 10. Left to the builder
 
-- Exact phasing and order of work (suggested: engine host + provider → disk storage + timeline-core → branches + Accept/Reject → tools → goal integration → UI → acceptance suite).
+- Exact phasing and order of work (suggested: local wasm build pipeline → Rust timeline crate with parity tests → engine host + provider → disk storage → branches + Accept/Reject → tools → goal integration → UI → acceptance suite).
 - Beat/shot detection implementation (e.g. aubio/essentia binaries vs JS/WASM onset detection).
 - ffmpeg filter-graph generation details and preview resolution.
 - Default model ids per agent.
