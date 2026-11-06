@@ -256,6 +256,7 @@
   },
   "op": {
     "type": "trimElement",
+    "trackId": "main",
     "elementId": "el-1",
     "trimStart": 0,
     "trimEnd": 60000,

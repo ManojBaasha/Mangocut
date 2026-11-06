@@ -99,9 +99,22 @@ fn errors_are_typed_not_panics() {
             "track_not_found",
         ),
         (
-            op(json!({"type": "trimElement", "elementId": "el1", "trimStart": -5, "trimEnd": 0})),
+            op(json!({"type": "trimElement", "trackId": "main", "elementId": "el1", "trimStart": -5, "trimEnd": 0})),
             vec![],
             "invalid_trim",
+        ),
+        (
+            op(json!({"type": "trimElement", "trackId": "missing-track", "elementId": "el1",
+                "trimStart": 0, "trimEnd": 0})),
+            vec![],
+            "track_not_found",
+        ),
+        // el1 exists, but on main, not on the named track.
+        (
+            op(json!({"type": "trimElement", "trackId": "text-1", "elementId": "el1",
+                "trimStart": 0, "trimEnd": 0})),
+            vec![],
+            "element_not_found",
         ),
         // A text element moved onto an audio track.
         (
@@ -139,7 +152,7 @@ fn errors_are_typed_not_panics() {
 #[test]
 fn hints_name_valid_values() {
     let err = error_of(
-        op(json!({"type": "trimElement", "elementId": "el1", "trimStart": 600, "trimEnd": 600})),
+        op(json!({"type": "trimElement", "trackId": "main", "elementId": "el1", "trimStart": 600, "trimEnd": 600})),
         &[],
     );
     assert_eq!(err.code, "invalid_trim");
@@ -399,8 +412,8 @@ fn every_op() -> Vec<TimelineOp> {
             json!({"type": "splitElements", "elements": refs(track, element), "splitTime": 10}),
             json!({"type": "splitElements", "elements": refs(track, element), "splitTime": 0,
                 "retainSide": "left"}),
-            json!({"type": "trimElement", "elementId": element, "trimStart": 5, "trimEnd": 5}),
-            json!({"type": "trimElement", "elementId": element, "trimStart": 0, "trimEnd": 0,
+            json!({"type": "trimElement", "trackId": track, "elementId": element, "trimStart": 5, "trimEnd": 5}),
+            json!({"type": "trimElement", "trackId": track, "elementId": element, "trimStart": 0, "trimEnd": 0,
                 "startTime": 3, "duration": 0}),
             json!({"type": "retimeElement", "trackId": track, "elementId": element,
                 "retime": {"rate": 0}}),
@@ -466,6 +479,7 @@ fn every_op() -> Vec<TimelineOp> {
         retain_side: Default::default(),
     });
     parsed.push(TimelineOp::TrimElement {
+        track_id: "main".into(),
         element_id: "el1".into(),
         trim_start: Ticks(f64::NAN),
         trim_end: Ticks(f64::NEG_INFINITY),

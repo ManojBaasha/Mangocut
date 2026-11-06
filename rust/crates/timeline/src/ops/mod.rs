@@ -42,6 +42,7 @@ pub enum TimelineOp {
         retain_side: RetainSide,
     },
     TrimElement {
+        track_id: String,
         element_id: String,
         trim_start: Ticks,
         trim_end: Ticks,
@@ -314,6 +315,7 @@ fn apply(
             retain_side,
         } => split::split(tracks, elements, *split_time, *retain_side, ids),
         TimelineOp::TrimElement {
+            track_id,
             element_id,
             trim_start,
             trim_end,
@@ -321,6 +323,7 @@ fn apply(
             duration,
         } => trim::trim(
             tracks,
+            track_id,
             element_id,
             *trim_start,
             *trim_end,

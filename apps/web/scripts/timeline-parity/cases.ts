@@ -503,7 +503,7 @@ export const cases: ParityCase[] = [
 	{
 		name: "trim_start_end",
 		input: splitScene,
-		op: { type: "trimElement", elementId: "el-1", trimStart: 10000, trimEnd: 5000 },
+		op: { type: "trimElement", trackId: "main", elementId: "el-1", trimStart: 10000, trimEnd: 5000 },
 		newIds: [],
 	},
 	{
@@ -511,6 +511,7 @@ export const cases: ParityCase[] = [
 		input: splitScene,
 		op: {
 			type: "trimElement",
+			trackId: "main",
 			elementId: "el-2",
 			trimStart: 10000,
 			trimEnd: 0,
@@ -522,7 +523,7 @@ export const cases: ParityCase[] = [
 	{
 		name: "trim_clamps_animations",
 		input: animatedScene,
-		op: { type: "trimElement", elementId: "el-1", trimStart: 0, trimEnd: 60000, duration: 60000 },
+		op: { type: "trimElement", trackId: "main", elementId: "el-1", trimStart: 0, trimEnd: 60000, duration: 60000 },
 		newIds: ["px-left", "px-right", "op-left", "op-right", "c-left", "c-right", "m-left", "m-right"],
 	},
 	{
@@ -746,7 +747,7 @@ export const cases: ParityCase[] = [
 	{
 		name: "trim_unknown_element",
 		input: splitScene,
-		op: { type: "trimElement", elementId: "missing", trimStart: 0, trimEnd: 0 },
+		op: { type: "trimElement", trackId: "main", elementId: "missing", trimStart: 0, trimEnd: 0 },
 		newIds: [],
 		expectedError: "element_not_found",
 	},

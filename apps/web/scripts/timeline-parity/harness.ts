@@ -55,6 +55,7 @@ export type TimelineOp =
 	  }
 	| {
 			type: "trimElement";
+			trackId: string;
 			elementId: string;
 			trimStart: number;
 			trimEnd: number;
@@ -166,6 +167,8 @@ function buildCommand(op: TimelineOp): Command | null {
 				retainSide: op.retainSide,
 			});
 		case "trimElement": {
+			// Legacy `updateElementTrim` looks the track up by element id; the
+			// op's trackId is what the Rust side uses (same track in every case).
 			const trackId = findTrackIdForElement(op.elementId);
 			if (!trackId) return null;
 			const patch: Record<string, number> = {

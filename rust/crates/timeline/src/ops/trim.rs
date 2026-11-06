@@ -1,6 +1,8 @@
 //! `TrimElement`. Mirrors `TimelineManager.updateElementTrim`
 //! (`core/managers/timeline-manager.ts`): an `UpdateElements` patch on the
-//! element's track (TS no-ops on an unknown id; this reports it).
+//! element's track (TS no-ops on an unknown id; this reports it). Like every
+//! element op it names the track, so lookup is typed: `track_not_found` /
+//! `element_not_found`.
 
 use serde_json::{Map, Value};
 
@@ -10,12 +12,12 @@ use super::{Applied, ElementUpdate, IdSource};
 use crate::animation_split::js_num;
 use crate::error::TimelineError;
 use crate::model::{SceneTracks, Ticks};
-use crate::placement::ordered_tracks;
 
 // `!(x < y)` is deliberate: it also rejects NaN.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub(super) fn trim(
     tracks: &mut SceneTracks,
+    track_id: &str,
     element_id: &str,
     trim_start: Ticks,
     trim_end: Ticks,
@@ -23,15 +25,9 @@ pub(super) fn trim(
     duration: Option<Ticks>,
     ids: &mut IdSource,
 ) -> Result<Applied, TimelineError> {
-    let Some(track_id) = ordered_tracks(tracks)
-        .into_iter()
-        .find(|view| view.elements.iter().any(|span| span.id == element_id))
-        .map(|view| view.id.to_string())
-    else {
-        return Err(super::lookup::element_not_found(tracks, None, element_id));
-    };
+    super::lookup::require_element(tracks, track_id, element_id)?;
 
-    let source_duration = track_elements(tracks, &track_id)
+    let source_duration = track_elements(tracks, track_id)
         .unwrap_or_default()
         .iter()
         .find(|element| element_id_of(element) == Some(element_id))
@@ -93,7 +89,7 @@ pub(super) fn trim(
     update(
         tracks,
         &[ElementUpdate {
-            track_id,
+            track_id: track_id.to_string(),
             element_id: element_id.to_string(),
             patch: Value::Object(patch),
         }],
