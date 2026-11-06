@@ -1,5 +1,7 @@
 //! The single entry point for timeline edits.
 
+mod insert;
+
 use bridge::export;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -244,7 +246,9 @@ fn apply(
         TimelineOp::RemoveTrack { track_id } => remove_track(tracks, track_id),
         TimelineOp::ToggleTrackMute { track_id } => toggle_track_mute(tracks, track_id),
         TimelineOp::ToggleTrackVisibility { track_id } => toggle_track_visibility(tracks, track_id),
-        TimelineOp::InsertElement { .. } => Err(TimelineError::unsupported_op("insertElement")),
+        TimelineOp::InsertElement { element, placement } => {
+            insert::insert(tracks, element, placement, ids)
+        }
         TimelineOp::SplitElements { .. } => Err(TimelineError::unsupported_op("splitElements")),
         TimelineOp::TrimElement { .. } => Err(TimelineError::unsupported_op("trimElement")),
         TimelineOp::RetimeElement { .. } => Err(TimelineError::unsupported_op("retimeElement")),

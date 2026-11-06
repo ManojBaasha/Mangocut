@@ -1,0 +1,87 @@
+{
+  "name": "insert_video_auto_empty",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  },
+  "op": {
+    "type": "insertElement",
+    "element": {
+      "type": "video",
+      "mediaId": "media-2",
+      "name": "new.mp4",
+      "startTime": 0,
+      "duration": 60000,
+      "sourceDuration": 60000,
+      "muted": false,
+      "isSourceAudioEnabled": true,
+      "hidden": false,
+      "transform": {
+        "scaleX": 1,
+        "scaleY": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "rotate": 0
+      },
+      "opacity": 1,
+      "blendMode": "normal",
+      "volume": 0
+    },
+    "placement": {
+      "mode": "auto"
+    }
+  },
+  "newIds": [
+    "new-el"
+  ],
+  "ripple": false,
+  "expected": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "mediaId": "media-2",
+          "name": "new.mp4",
+          "startTime": 0,
+          "duration": 60000,
+          "sourceDuration": 60000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "id": "new-el",
+          "trimStart": 0,
+          "trimEnd": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  }
+}

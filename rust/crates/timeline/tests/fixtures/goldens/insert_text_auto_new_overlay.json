@@ -1,0 +1,157 @@
+{
+  "name": "insert_text_auto_new_overlay",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  },
+  "op": {
+    "type": "insertElement",
+    "element": {
+      "type": "text",
+      "name": "Title",
+      "content": "Hello",
+      "startTime": 0,
+      "fontSize": 15,
+      "fontFamily": "Arial",
+      "color": "#ffffff",
+      "background": {
+        "enabled": false
+      },
+      "textAlign": "center",
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "textDecoration": "none",
+      "transform": {
+        "scaleX": 1,
+        "scaleY": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "rotate": 0
+      },
+      "opacity": 1
+    },
+    "placement": {
+      "mode": "auto"
+    }
+  },
+  "newIds": [
+    "new-el",
+    "new-track"
+  ],
+  "ripple": false,
+  "expected": {
+    "overlay": [
+      {
+        "id": "new-track",
+        "name": "Text track",
+        "type": "text",
+        "elements": [
+          {
+            "type": "text",
+            "name": "Title",
+            "content": "Hello",
+            "startTime": 0,
+            "fontSize": 15,
+            "fontFamily": "Arial",
+            "color": "#ffffff",
+            "background": {
+              "enabled": false
+            },
+            "textAlign": "center",
+            "fontWeight": "normal",
+            "fontStyle": "normal",
+            "textDecoration": "none",
+            "transform": {
+              "scaleX": 1,
+              "scaleY": 1,
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "rotate": 0
+            },
+            "opacity": 1,
+            "id": "new-el",
+            "trimStart": 0,
+            "trimEnd": 0,
+            "duration": 600000
+          }
+        ],
+        "hidden": false
+      }
+    ],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  }
+}

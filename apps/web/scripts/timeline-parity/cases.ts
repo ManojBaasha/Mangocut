@@ -90,6 +90,33 @@ const overlayScene: SceneTracks = scene({
 	] as SceneTracks["audio"],
 });
 
+const videoInput = {
+	type: "video" as const,
+	mediaId: "media-2",
+	name: "new.mp4",
+	startTime: 0,
+	duration: 60000,
+	sourceDuration: 60000,
+	muted: false,
+	isSourceAudioEnabled: true,
+	hidden: false,
+	transform: FIXED_TRANSFORM,
+	opacity: 1,
+	blendMode: "normal" as const,
+	volume: 0,
+};
+
+const emptyMainScene: SceneTracks = scene({
+	main: {
+		id: "main",
+		name: "Main Track",
+		type: "video",
+		elements: [],
+		muted: false,
+		hidden: false,
+	} as SceneTracks["main"],
+});
+
 export const cases: ParityCase[] = [
 	{
 		name: "add_track_video_default",
@@ -120,5 +147,96 @@ export const cases: ParityCase[] = [
 		input: simpleScene,
 		op: { type: "toggleTrackMute", trackId: "main" },
 		newIds: [],
+	},
+	{
+		name: "insert_video_auto_empty",
+		input: emptyMainScene,
+		op: {
+			type: "insertElement",
+			element: videoInput,
+			placement: { mode: "auto" },
+		},
+		newIds: ["new-el"],
+	},
+	{
+		name: "insert_video_auto_after_existing",
+		input: simpleScene,
+		op: {
+			type: "insertElement",
+			element: { ...videoInput, startTime: 120000 },
+			placement: { mode: "auto" },
+		},
+		newIds: ["new-el"],
+	},
+	{
+		name: "insert_text_auto_new_overlay",
+		input: simpleScene,
+		op: {
+			type: "insertElement",
+			element: {
+				type: "text",
+				name: "Title",
+				content: "Hello",
+				startTime: 0,
+				fontSize: 15,
+				fontFamily: "Arial",
+				color: "#ffffff",
+				background: { enabled: false },
+				textAlign: "center",
+				fontWeight: "normal",
+				fontStyle: "normal",
+				textDecoration: "none",
+				transform: FIXED_TRANSFORM,
+				opacity: 1,
+			},
+			placement: { mode: "auto" },
+		},
+		newIds: ["new-el", "new-track"],
+	},
+	{
+		name: "insert_audio_explicit_track",
+		input: overlayScene,
+		op: {
+			type: "insertElement",
+			element: {
+				type: "audio",
+				sourceType: "library",
+				sourceUrl: "https://example.com/a.mp3",
+				name: "Song",
+				startTime: 30000,
+				volume: 1,
+			},
+			placement: { mode: "explicit", trackId: "audio-1" },
+		},
+		newIds: ["new-el"],
+	},
+	{
+		name: "insert_image_on_occupied_span",
+		input: simpleScene,
+		op: {
+			type: "insertElement",
+			element: {
+				type: "image",
+				mediaId: "media-3",
+				name: "pic.png",
+				startTime: 0,
+				duration: 60000,
+				hidden: false,
+				transform: FIXED_TRANSFORM,
+				opacity: 1,
+			},
+			placement: { mode: "auto" },
+		},
+		newIds: ["new-el", "new-track"],
+	},
+	{
+		name: "insert_video_explicit_incompatible_track",
+		input: overlayScene,
+		op: {
+			type: "insertElement",
+			element: videoInput,
+			placement: { mode: "explicit", trackId: "text-1" },
+		},
+		newIds: ["new-el"],
 	},
 ];

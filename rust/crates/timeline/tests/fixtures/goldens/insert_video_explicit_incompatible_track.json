@@ -1,0 +1,93 @@
+{
+  "name": "insert_video_explicit_incompatible_track",
+  "input": {
+    "overlay": [
+      {
+        "id": "text-1",
+        "name": "Text track",
+        "type": "text",
+        "elements": [],
+        "hidden": false
+      }
+    ],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": [
+      {
+        "id": "audio-1",
+        "name": "Audio track",
+        "type": "audio",
+        "elements": [],
+        "muted": false
+      }
+    ]
+  },
+  "op": {
+    "type": "insertElement",
+    "element": {
+      "type": "video",
+      "mediaId": "media-2",
+      "name": "new.mp4",
+      "startTime": 0,
+      "duration": 60000,
+      "sourceDuration": 60000,
+      "muted": false,
+      "isSourceAudioEnabled": true,
+      "hidden": false,
+      "transform": {
+        "scaleX": 1,
+        "scaleY": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "rotate": 0
+      },
+      "opacity": 1,
+      "blendMode": "normal",
+      "volume": 0
+    },
+    "placement": {
+      "mode": "explicit",
+      "trackId": "text-1"
+    }
+  },
+  "newIds": [
+    "new-el"
+  ],
+  "ripple": false,
+  "expected": null
+}

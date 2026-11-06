@@ -62,3 +62,8 @@ fn track_ops_match_ts() {
     assert_golden("toggle_mute");
     assert_golden("toggle_visibility");
 }
+
+#[test]
+fn insert_matches_ts() {
+    assert_golden("insert_");
+}
