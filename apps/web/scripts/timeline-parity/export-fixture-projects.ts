@@ -39,6 +39,9 @@ const FIXED_DATE_2 = "2026-01-02T12:30:00.000Z";
 
 const { buildElementFromMedia, buildTextElement, buildEffectElement, buildStickerElement, buildGraphicElement, buildLibraryAudioElement } =
 	await import("../../src/lib/timeline/element-utils");
+const { serializeProject } = await import("../../src/services/storage/service");
+const { applyElementUpdate } = await import("../../src/lib/timeline/update-pipeline");
+const { getSourceSpanAtClipTime } = await import("../../src/lib/retime");
 const { upsertElementKeyframe } = await import("../../src/lib/animation/keyframes");
 const { registerDefaultEffects, buildDefaultEffectInstance } = await import("../../src/lib/effects");
 const { registerDefaultMasks, buildDefaultMaskInstance } = await import("../../src/lib/masks");
@@ -69,13 +72,15 @@ function buildProject({
 	bookmarks?: unknown[];
 	settingsExtra?: Record<string, unknown>;
 }) {
-	return {
+	// Built as a TProject (Dates) and serialized by the storage layer's own
+	// `serializeProject`, exactly as `saveProject` does.
+	const project = {
 		metadata: {
 			id,
 			name,
 			duration: 1_000_000 * 10,
-			createdAt: FIXED_DATE,
-			updatedAt: FIXED_DATE_2,
+			createdAt: new Date(FIXED_DATE),
+			updatedAt: new Date(FIXED_DATE_2),
 		},
 		scenes: [
 			{
@@ -95,8 +100,8 @@ function buildProject({
 					audio,
 				},
 				bookmarks,
-				createdAt: FIXED_DATE,
-				updatedAt: FIXED_DATE_2,
+				createdAt: new Date(FIXED_DATE),
+				updatedAt: new Date(FIXED_DATE_2),
 			},
 		],
 		currentSceneId: `${id}-scene`,
@@ -111,6 +116,7 @@ function buildProject({
 		version: 23,
 		timelineViewState: { zoomLevel: 1, scrollLeft: 0, playheadTime: 0 },
 	};
+	return serializeProject({ project: project as any });
 }
 
 const T = 1_000_000;
@@ -190,12 +196,10 @@ function mixedProject() {
 	) as any;
 	text.animations = upsertElementKeyframe({ animations: undefined, propertyPath: "background.paddingX", time: 0, value: 10, keyframeId: "kf-t1" });
 	const sticker = withId("el", buildStickerElement({ stickerId: "icons:heart-fill", startTime: T, intrinsicWidth: 64, intrinsicHeight: 64 }));
-	let graphic: any;
-	try {
-		graphic = withId("el", buildGraphicElement({ definitionId: "rectangle", startTime: 2 * T }));
-	} catch (e) {
-		console.warn("graphic builder unavailable:", (e as Error).message);
-	}
+	const graphic = withId(
+		"el",
+		buildGraphicElement({ definitionId: "rectangle", startTime: 2 * T }),
+	);
 	const upload = withId(
 		"el",
 		buildElementFromMedia({ mediaId: "media-4", mediaType: "audio", name: "voice.wav", duration: 8 * T, startTime: 0 }),
@@ -210,13 +214,53 @@ function mixedProject() {
 		name: "Audio and text",
 		overlay: [
 			{ id: "track-text", name: "Text", type: "text", elements: [text], hidden: false },
-			{ id: "track-graphic", name: "Graphics", type: "graphic", elements: [sticker, ...(graphic ? [graphic] : [])], hidden: true },
+			{ id: "track-graphic", name: "Graphics", type: "graphic", elements: [sticker, graphic], hidden: true },
 		],
 		main: [],
 		audio: [
 			{ id: "track-audio-1", name: "Audio 1", type: "audio", elements: [upload], muted: false },
 			{ id: "track-audio-2", name: "Audio 2", type: "audio", elements: [library], muted: true },
 		],
+	});
+}
+
+// 3b. retime + split through the app's own update pipeline / split arithmetic
+function retimedProject() {
+	counter = 0;
+	const video = withId(
+		"el",
+		buildElementFromMedia({ mediaId: "media-5", mediaType: "video", name: "r.mp4", duration: 120_000, startTime: 0 }),
+	) as any;
+	const tracks = {
+		overlay: [],
+		main: { id: "fixture-retimed-main", name: "Main Track", type: "video", elements: [video], muted: false, hidden: false },
+		audio: [],
+	} as any;
+	const context = { tracks, trackId: tracks.main.id };
+	// Retime through the same pipeline UpdateElements uses (duration is derived).
+	const retimed = applyElementUpdate({ element: video, patch: { retime: { rate: 0.7, maintainPitch: true } } as any, context }) as any;
+	// Split the retimed clip with the split command's arithmetic.
+	const splitTime = 50_000;
+	const relative = splitTime - retimed.startTime;
+	const leftSpan = getSourceSpanAtClipTime({ clipTime: relative, retime: retimed.retime });
+	const totalSpan = getSourceSpanAtClipTime({ clipTime: retimed.duration, retime: retimed.retime });
+	const rightSpan = totalSpan - leftSpan;
+	const left = { ...retimed, duration: relative, trimEnd: retimed.trimEnd + rightSpan, name: "r.mp4 (left)" };
+	const right = { ...retimed, id: "el-split-right", startTime: splitTime, duration: retimed.duration - relative, trimStart: retimed.trimStart + leftSpan, name: "r.mp4 (right)" };
+	// Resize the right half's retime again (rate 1.1) through the pipeline.
+	const reretimed = applyElementUpdate({ element: right, patch: { retime: { rate: 1.1 } } as any, context }) as any;
+	tracks.main.elements = [left, reretimed];
+	const audio = withId(
+		"el",
+		buildElementFromMedia({ mediaId: "media-6", mediaType: "audio", name: "a.wav", duration: 90_000, startTime: 0 }),
+	) as any;
+	const audioRetimed = applyElementUpdate({ element: audio, patch: { retime: { rate: 1.1 } } as any, context: { tracks, trackId: "track-audio-r" } }) as any;
+	return buildProject({
+		id: "fixture-retimed",
+		name: "Retimed and split",
+		overlay: [],
+		main: tracks.main.elements,
+		audio: [{ id: "track-audio-r", name: "Audio", type: "audio", elements: [audioRetimed], muted: false }],
 	});
 }
 
@@ -277,6 +321,7 @@ const projects: Record<string, unknown> = {
 	"keyframes.json": keyframeProject(),
 	"effects-masks.json": effectsMasksProject(),
 	"audio-text-graphics.json": mixedProject(),
+	"retimed-split.json": retimedProject(),
 	"unknown-fields.json": unknownFieldsProject(),
 };
 for (const [file, project] of Object.entries(projects)) {

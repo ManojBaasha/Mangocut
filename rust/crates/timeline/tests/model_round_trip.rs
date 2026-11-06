@@ -140,3 +140,25 @@ fn round_trip_preserves_unknown_audio_element_fields() {
     assert_eq!(path(&out), serde_json::json!([1, "two"]));
     assert_eq!(path(&out), path(&raw));
 }
+
+#[test]
+fn fractional_ticks_round_trip_exactly() {
+    use timeline::{Ticks, VideoTrackElement};
+
+    let raw = read_json(&fixture_dir("projects").join("retimed-split.json"));
+    let project: Project = serde_json::from_value(raw.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&project).unwrap(), raw);
+
+    let VideoTrackElement::Video(right) = &project.scenes[0].tracks.main.elements[1] else {
+        panic!("expected video element");
+    };
+    assert_ne!(
+        right.duration.get().fract(),
+        0.0,
+        "fixture must be fractional"
+    );
+    assert_eq!(right.duration.round(), Ticks(right.duration.get().round()));
+    assert_eq!(right.duration.round().get().fract(), 0.0);
+    // Loading does not round.
+    assert_eq!(right.duration.get(), 77272.72727272726);
+}

@@ -23,6 +23,55 @@ import {
 } from "@/services/storage/migrations";
 import type { Bookmark, SceneTracks, TScene } from "@/lib/timeline";
 
+function stripAudioBuffers({ tracks }: { tracks: SceneTracks }): SceneTracks {
+	return {
+		...tracks,
+		audio: tracks.audio.map((track) => ({
+			...track,
+			elements: track.elements.map((element) => {
+				const { buffer: _buffer, ...rest } = element;
+				return rest;
+			}),
+		})),
+	};
+}
+
+/** Pure project -> stored JSON conversion used by `saveProject`. */
+export function serializeProject({
+	project,
+}: {
+	project: TProject;
+}): SerializedProject {
+	const duration =
+		project.metadata.duration ??
+		getProjectDurationFromScenes({ scenes: project.scenes });
+	const serializedScenes: SerializedScene[] = project.scenes.map((scene) => ({
+		id: scene.id,
+		name: scene.name,
+		isMain: scene.isMain,
+		tracks: stripAudioBuffers({ tracks: scene.tracks }),
+		bookmarks: scene.bookmarks,
+		createdAt: scene.createdAt.toISOString(),
+		updatedAt: scene.updatedAt.toISOString(),
+	}));
+
+	return {
+		metadata: {
+			id: project.metadata.id,
+			name: project.metadata.name,
+			thumbnail: project.metadata.thumbnail,
+			duration,
+			createdAt: project.metadata.createdAt.toISOString(),
+			updatedAt: project.metadata.updatedAt.toISOString(),
+		},
+		scenes: serializedScenes,
+		currentSceneId: project.currentSceneId,
+		settings: project.settings,
+		version: project.version,
+		timelineViewState: project.timelineViewState,
+	};
+}
+
 function normalizeBookmarks({ raw }: { raw: unknown }): Bookmark[] {
 	if (!Array.isArray(raw)) return [];
 	return raw
@@ -113,54 +162,11 @@ class StorageService {
 		return isStorageQuotaExceededError({ error });
 	}
 
-	private stripAudioBuffers({
-		tracks,
-	}: {
-		tracks: SceneTracks;
-	}): SceneTracks {
-		return {
-			...tracks,
-			audio: tracks.audio.map((track) => ({
-				...track,
-				elements: track.elements.map((element) => {
-					const { buffer: _buffer, ...rest } = element;
-					return rest;
-				}),
-			})),
-		};
-	}
-
 	async saveProject({ project }: { project: TProject }): Promise<void> {
-		const duration =
-			project.metadata.duration ??
-			getProjectDurationFromScenes({ scenes: project.scenes });
-		const serializedScenes: SerializedScene[] = project.scenes.map((scene) => ({
-			id: scene.id,
-			name: scene.name,
-			isMain: scene.isMain,
-			tracks: this.stripAudioBuffers({ tracks: scene.tracks }),
-			bookmarks: scene.bookmarks,
-			createdAt: scene.createdAt.toISOString(),
-			updatedAt: scene.updatedAt.toISOString(),
-		}));
-
-		const serializedProject: SerializedProject = {
-			metadata: {
-				id: project.metadata.id,
-				name: project.metadata.name,
-				thumbnail: project.metadata.thumbnail,
-				duration,
-				createdAt: project.metadata.createdAt.toISOString(),
-				updatedAt: project.metadata.updatedAt.toISOString(),
-			},
-			scenes: serializedScenes,
-			currentSceneId: project.currentSceneId,
-			settings: project.settings,
-			version: project.version,
-			timelineViewState: project.timelineViewState,
-		};
-
-		await this.projectsAdapter.set(project.metadata.id, serializedProject);
+		await this.projectsAdapter.set(
+			project.metadata.id,
+			serializeProject({ project }),
+		);
 	}
 
 	async loadProject({

@@ -1,0 +1,140 @@
+{
+	"metadata": {
+		"id": "fixture-retimed",
+		"name": "Retimed and split",
+		"duration": 10000000,
+		"createdAt": "2026-01-01T00:00:00.000Z",
+		"updatedAt": "2026-01-02T12:30:00.000Z"
+	},
+	"scenes": [
+		{
+			"id": "fixture-retimed-scene",
+			"name": "Main scene",
+			"isMain": true,
+			"tracks": {
+				"overlay": [],
+				"main": {
+					"id": "fixture-retimed-main",
+					"name": "Main Track",
+					"type": "video",
+					"elements": [
+						{
+							"type": "video",
+							"mediaId": "media-5",
+							"name": "r.mp4 (left)",
+							"duration": 50000,
+							"startTime": 0,
+							"trimStart": 0,
+							"trimEnd": 85000,
+							"sourceDuration": 120000,
+							"muted": false,
+							"isSourceAudioEnabled": true,
+							"hidden": false,
+							"transform": {
+								"scaleX": 1,
+								"scaleY": 1,
+								"position": {
+									"x": 0,
+									"y": 0
+								},
+								"rotate": 0
+							},
+							"opacity": 1,
+							"blendMode": "normal",
+							"volume": 0,
+							"id": "el-1",
+							"retime": {
+								"rate": 0.7,
+								"maintainPitch": true
+							}
+						},
+						{
+							"type": "video",
+							"mediaId": "media-5",
+							"name": "r.mp4 (right)",
+							"duration": 77272.72727272726,
+							"startTime": 50000,
+							"trimStart": 35000,
+							"trimEnd": 0,
+							"sourceDuration": 120000,
+							"muted": false,
+							"isSourceAudioEnabled": true,
+							"hidden": false,
+							"transform": {
+								"scaleX": 1,
+								"scaleY": 1,
+								"position": {
+									"x": 0,
+									"y": 0
+								},
+								"rotate": 0
+							},
+							"opacity": 1,
+							"blendMode": "normal",
+							"volume": 0,
+							"id": "el-split-right",
+							"retime": {
+								"rate": 1.1
+							}
+						}
+					],
+					"muted": false,
+					"hidden": false
+				},
+				"audio": [
+					{
+						"id": "track-audio-r",
+						"name": "Audio",
+						"type": "audio",
+						"elements": [
+							{
+								"type": "audio",
+								"sourceType": "upload",
+								"mediaId": "media-6",
+								"name": "a.wav",
+								"duration": 81818.18181818181,
+								"startTime": 0,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"sourceDuration": 90000,
+								"volume": 0,
+								"muted": false,
+								"id": "el-2",
+								"retime": {
+									"rate": 1.1
+								}
+							}
+						],
+						"muted": false
+					}
+				]
+			},
+			"bookmarks": [],
+			"createdAt": "2026-01-01T00:00:00.000Z",
+			"updatedAt": "2026-01-02T12:30:00.000Z"
+		}
+	],
+	"currentSceneId": "fixture-retimed-scene",
+	"settings": {
+		"fps": {
+			"numerator": 30,
+			"denominator": 1
+		},
+		"canvasSize": {
+			"width": 1920,
+			"height": 1080
+		},
+		"canvasSizeMode": "preset",
+		"originalCanvasSize": null,
+		"background": {
+			"type": "color",
+			"color": "#000000"
+		}
+	},
+	"version": 23,
+	"timelineViewState": {
+		"zoomLevel": 1,
+		"scrollLeft": 0,
+		"playheadTime": 0
+	}
+}

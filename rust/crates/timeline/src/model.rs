@@ -8,8 +8,10 @@
 //!   marker `type` field. That keeps `type` a real field on every struct (the
 //!   main track and audio track elements are deserialized outside any tagged
 //!   enum) and yields the same TypeScript shape as the app's own types.
-//! - Times are integer ticks (`i64`). Other numbers are `f64`, serialized
-//!   without a fractional part when integral (like `JSON.stringify`).
+//! - Times are [`Ticks`]: an `f64` newtype that round-trips the exact JSON
+//!   number. The app writes fractional ticks (retime, split, agent trims), so
+//!   nothing is rounded on load. Other numbers are `f64`; integral values are
+//!   serialized without a fractional part (like `JSON.stringify`).
 //! - `animations`, `effects`, `masks`, `params` and text `background` are opaque
 //!   `serde_json::Value` until later phases give them structure.
 
@@ -59,6 +61,54 @@ mod nullable {
 }
 
 pub type Extra = Map<String, Value>;
+
+/// A time in ticks. The app can store fractional ticks (retimed durations,
+/// split trims), so this wraps `f64` and writes integral values as JSON
+/// integers and fractional values exactly. Call [`Ticks::round`] to snap to a
+/// whole tick; loading never rounds.
+#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+pub struct Ticks(pub f64);
+
+impl Ticks {
+    pub fn new(value: f64) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> f64 {
+        self.0
+    }
+
+    /// Nearest whole tick.
+    pub fn round(self) -> Self {
+        Self(self.0.round())
+    }
+}
+
+impl From<f64> for Ticks {
+    fn from(value: f64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for Ticks {
+    fn from(value: i64) -> Self {
+        Self(value as f64)
+    }
+}
+
+impl Serialize for Ticks {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        js_number::serialize(&self.0, serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Ticks {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        f64::deserialize(deserializer).map(Self)
+    }
+}
 
 /// Declares a single-value enum used as the `type` marker of a struct.
 macro_rules! marker {
@@ -118,7 +168,7 @@ pub struct ProjectMetadata {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<String>,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// ISO 8601 timestamp.
     pub created_at: String,
     /// ISO 8601 timestamp.
@@ -240,14 +290,14 @@ pub struct Scene {
 #[serde(rename_all = "camelCase")]
 pub struct Bookmark {
     /// Ticks.
-    pub time: i64,
+    pub time: Ticks,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub duration: Option<i64>,
+    pub duration: Option<Ticks>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -516,16 +566,16 @@ pub struct AudioElement {
     pub kind: AudioElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     #[serde(serialize_with = "js_number::serialize")]
@@ -563,16 +613,16 @@ pub struct VideoElement {
     pub kind: VideoElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub media_id: String,
@@ -613,16 +663,16 @@ pub struct ImageElement {
     pub kind: ImageElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub media_id: String,
@@ -689,16 +739,16 @@ pub struct TextElement {
     pub kind: TextElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub content: String,
@@ -747,16 +797,16 @@ pub struct StickerElement {
     pub kind: StickerElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub sticker_id: String,
@@ -795,16 +845,16 @@ pub struct GraphicElement {
     pub kind: GraphicElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub definition_id: String,
@@ -835,16 +885,16 @@ pub struct EffectElement {
     pub kind: EffectElementType,
     pub name: String,
     /// Ticks.
-    pub duration: i64,
+    pub duration: Ticks,
     /// Ticks.
-    pub start_time: i64,
+    pub start_time: Ticks,
     /// Ticks.
-    pub trim_start: i64,
+    pub trim_start: Ticks,
     /// Ticks.
-    pub trim_end: i64,
+    pub trim_end: Ticks,
     /// Ticks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_duration: Option<i64>,
+    pub source_duration: Option<Ticks>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animations: Option<Value>,
     pub effect_type: String,
