@@ -5,6 +5,7 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "node script/sync-wasm.mjs --if-present",
     "build:wasm": "bash script/ensure-wasm-toolchain.sh && wasm-pack build rust/wasm --target bundler --out-dir pkg && node script/sync-wasm.mjs",
     "build:wasm:node": "wasm-pack build rust/wasm --target nodejs --out-dir pkg-node -- --no-default-features --features wasm",
     "build:wasm:all": "bun run build:wasm && bun run build:wasm:node",
