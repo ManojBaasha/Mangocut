@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "rust/crates/time",
+    "rust/crates/timeline",
     "rust/crates/bridge",
     "rust/crates/effects",
     "rust/crates/gpu",

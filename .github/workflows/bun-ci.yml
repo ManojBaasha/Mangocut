@@ -36,8 +36,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust wasm target
-        run: rustup target add wasm32-unknown-unknown
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
@@ -54,7 +56,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
       - name: Build WASM
-        run: wasm-pack build rust/wasm --target bundler --out-dir pkg
+        run: bun run build:wasm:all
+
+      - name: Rust tests
+        run: cargo test --workspace
 
       - name: Install Bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76
