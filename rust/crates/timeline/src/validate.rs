@@ -10,7 +10,6 @@
 // `!(x > 0.0)` is deliberate: it also rejects NaN.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use bridge::export;
 use serde::{Deserialize, Serialize};
 
 use crate::error::TimelineError;
@@ -297,7 +296,7 @@ pub(crate) fn first_new_violation(before: &SceneTracks, after: &SceneTracks) -> 
 }
 
 /// Every broken invariant in `tracks`, empty when the timeline is valid.
-#[export]
+/// Exported to wasm as `validateTracks` by `crate::wasm_api`.
 pub fn validate_tracks(options: ValidateOptions) -> Vec<TimelineError> {
     collect_violations(&options.tracks)
         .into_iter()

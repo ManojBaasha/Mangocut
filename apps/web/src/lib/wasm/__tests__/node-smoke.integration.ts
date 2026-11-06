@@ -107,6 +107,52 @@ describe("node wasm smoke", () => {
 		);
 	});
 
+	function thrownByOptions(options: unknown) {
+		try {
+			wasm.applyOp(options);
+		} catch (error) {
+			return error as { code: string; message: string; hint?: string };
+		}
+		throw new Error("expected applyOp to throw");
+	}
+
+	test("a negative index is a typed invalid_op error naming the path", () => {
+		const error = thrownByOptions({
+			tracks: sceneWithVideo(),
+			op: { type: "addTrack", trackType: "video", index: -1 },
+			newIds: ["t1"],
+		});
+		expect(error.code).toBe("invalid_op");
+		expect(error.message).toContain("op");
+		expect(error.message).toContain("-1");
+		expect(error.hint).toBe("check the op against the TimelineOp schema");
+	});
+
+	test("wrong types and unknown op types are invalid_op too", () => {
+		expect(
+			thrownByOptions({
+				tracks: sceneWithVideo(),
+				op: { type: "insertElement", element: {}, placement: { mode: "auto", insertIndex: -2 } },
+			}).code,
+		).toBe("invalid_op");
+		const unknown = thrownByOptions({ tracks: sceneWithVideo(), op: { type: "bogus" } });
+		expect(unknown.code).toBe("invalid_op");
+		expect(unknown.message).toContain("op.type");
+		expect(thrownByOptions({ tracks: 5, op: { type: "toggleTrackMute", trackId: "main" } }).code).toBe(
+			"invalid_op",
+		);
+	});
+
+	test("validateTracks throws invalid_op for malformed tracks", () => {
+		let thrown: { code?: string } | undefined;
+		try {
+			wasm.validateTracks({ tracks: { main: 5 } });
+		} catch (error) {
+			thrown = error as { code?: string };
+		}
+		expect(thrown?.code).toBe("invalid_op");
+	});
+
 	test("opaque animations/effects and extra fields come back as plain objects", () => {
 		const output = wasm.applyOp({
 			tracks: sceneWithVideo({

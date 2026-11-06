@@ -8,6 +8,8 @@ mod placement;
 mod retime;
 mod ripple;
 mod validate;
+#[cfg(feature = "wasm")]
+mod wasm_api;
 
 // Public API: the model, the op/option/result/error types, and the two entry
 // points. Placement, retime and ripple helpers stay crate-private.

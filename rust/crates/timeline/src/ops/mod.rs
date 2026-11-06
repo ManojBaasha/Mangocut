@@ -10,7 +10,6 @@ mod retime;
 mod split;
 mod trim;
 mod update;
-use bridge::export;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -215,7 +214,9 @@ impl Applied {
     }
 }
 
-#[export]
+/// Applies one op. In wasm this is exported as `applyOp` by
+/// `crate::wasm_api`, which deserializes options itself so bad input becomes
+/// a typed `invalid_op` error.
 pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
     let ApplyOpOptions {
         tracks,

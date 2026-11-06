@@ -78,6 +78,12 @@ impl TimelineError {
         .with_hint("use one of the supported operation types")
     }
 
+    /// Options that do not match the op schema (wrong type, negative index,
+    /// unknown op type...). `message` carries the serde error and its path.
+    pub fn invalid_op(message: impl Into<String>) -> Self {
+        Self::new("invalid_op", message).with_hint("check the op against the TimelineOp schema")
+    }
+
     /// Prefixes the message (used by `Batch` to name the failing op).
     pub fn prefixed(mut self, prefix: &str) -> Self {
         self.message = format!("{prefix}{}", self.message);
