@@ -49,6 +49,7 @@ import { OcRippleIcon } from "@/components/icons";
 import { GraphEditorPopover } from "./graph-editor/popover";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { useGraphEditorController } from "./graph-editor/use-controller";
+import { executeCommand } from "@/lib/commands-api";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -70,7 +71,10 @@ export function TimelineToolbar({
 	return (
 		<ScrollArea className="scrollbar-hidden">
 			<div className="flex h-10 items-center justify-between border-b px-2 py-1">
-				<ToolbarLeftSection />
+				<div className="flex min-w-0 items-center gap-2">
+					<AiPreviewTimelineControls />
+					<ToolbarLeftSection />
+				</div>
 
 				<SceneSelector />
 
@@ -82,6 +86,72 @@ export function TimelineToolbar({
 				/>
 			</div>
 		</ScrollArea>
+	);
+}
+
+function AiPreviewTimelineControls() {
+	const hasShadow = useEditor((e) => e.shadow.hasShadow());
+	const viewMode = useEditor((e) => e.shadow.getViewMode());
+	const diverged = useEditor((e) => e.shadow.isFinalDiverged());
+
+	if (!hasShadow) return null;
+
+	return (
+		<div className="border-border flex shrink-0 items-center gap-1 border-r pr-2">
+			<div className="bg-muted flex rounded-md p-0.5 text-[11px]">
+				<button
+					type="button"
+					className={cn(
+						"rounded px-2 py-1",
+						viewMode === "final" && "bg-background shadow-sm",
+					)}
+					onClick={() =>
+						void executeCommand({
+							name: "ai_set_view_mode",
+							args: { mode: "final" },
+						})
+					}
+				>
+					Main
+				</button>
+				<button
+					type="button"
+					className={cn(
+						"rounded px-2 py-1",
+						viewMode === "shadow" && "bg-background shadow-sm",
+					)}
+					onClick={() =>
+						void executeCommand({
+							name: "ai_set_view_mode",
+							args: { mode: "shadow" },
+						})
+					}
+				>
+					AI changes
+				</button>
+			</div>
+			<Button
+				size="sm"
+				variant="default"
+				className="h-7 text-[11px]"
+				onClick={() => void executeCommand({ name: "ai_accept_preview" })}
+			>
+				Merge
+			</Button>
+			<Button
+				size="sm"
+				variant="outline"
+				className="h-7 text-[11px]"
+				onClick={() => void executeCommand({ name: "ai_reject_preview" })}
+			>
+				Discard
+			</Button>
+			{diverged ? (
+				<span className="text-muted-foreground max-w-28 truncate text-[10px]">
+					Main edited — merge or discard
+				</span>
+			) : null}
+		</div>
 	);
 }
 

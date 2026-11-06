@@ -159,18 +159,10 @@ export default function PrivacyPage() {
 			<section className="flex flex-col gap-3">
 				<h2 className="text-2xl font-semibold">Analytics</h2>
 				<p>
-					We may use{" "}
-					<a
-						href="https://www.databuddy.cc"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-primary hover:underline"
-					>
-						Databuddy
-					</a>{" "}
-					or similar privacy-oriented analytics for basic, aggregated product
-					and site metrics. We do not sell analytics data, and we do not use
-					analytics to rebuild the contents of your video projects.
+					We do not currently run third-party product analytics in the editor.
+					If we add privacy-oriented analytics later, we will update this page
+					and will not sell analytics data or use it to rebuild the contents of
+					your video projects.
 				</p>
 			</section>
 

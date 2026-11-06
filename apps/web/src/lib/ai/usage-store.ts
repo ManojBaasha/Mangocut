@@ -4,6 +4,8 @@ import path from "node:path";
 
 export interface AiUsageRecord {
 	turns: number;
+	/** Cumulative OpenRouter cost in USD for this key. */
+	costUsd: number;
 	updatedAt: string;
 }
 
@@ -23,8 +25,21 @@ function readAll(): Record<string, AiUsageRecord> {
 	if (!fs.existsSync(filePath)) return {};
 	try {
 		const raw = fs.readFileSync(filePath, "utf8");
-		const parsed = JSON.parse(raw) as Record<string, AiUsageRecord>;
-		return parsed && typeof parsed === "object" ? parsed : {};
+		const parsed = JSON.parse(raw) as Record<string, Partial<AiUsageRecord>>;
+		if (!parsed || typeof parsed !== "object") return {};
+		const normalized: Record<string, AiUsageRecord> = {};
+		for (const [key, value] of Object.entries(parsed)) {
+			if (!value || typeof value !== "object") continue;
+			normalized[key] = {
+				turns: typeof value.turns === "number" ? value.turns : 0,
+				costUsd: typeof value.costUsd === "number" ? value.costUsd : 0,
+				updatedAt:
+					typeof value.updatedAt === "string"
+						? value.updatedAt
+						: new Date().toISOString(),
+			};
+		}
+		return normalized;
 	} catch {
 		return {};
 	}
@@ -38,10 +53,32 @@ export function getAiUsageTurns({ key }: { key: string }): number {
 	return readAll()[key]?.turns ?? 0;
 }
 
-export function incrementAiUsageTurns({ key }: { key: string }): number {
+export function getAiUsageCostUsd({ key }: { key: string }): number {
+	return readAll()[key]?.costUsd ?? 0;
+}
+
+export function listAllAiUsage(): Record<string, AiUsageRecord> {
+	return readAll();
+}
+
+export function incrementAiUsageTurns({
+	key,
+	costUsd = 0,
+}: {
+	key: string;
+	costUsd?: number;
+}): { turns: number; costUsd: number } {
 	const data = readAll();
-	const nextTurns = (data[key]?.turns ?? 0) + 1;
-	data[key] = { turns: nextTurns, updatedAt: new Date().toISOString() };
+	const prev = data[key];
+	const nextTurns = (prev?.turns ?? 0) + 1;
+	const nextCost =
+		Math.round(((prev?.costUsd ?? 0) + Math.max(0, costUsd)) * 1_000_000) /
+		1_000_000;
+	data[key] = {
+		turns: nextTurns,
+		costUsd: nextCost,
+		updatedAt: new Date().toISOString(),
+	};
 	writeAll({ data });
-	return nextTurns;
+	return { turns: nextTurns, costUsd: nextCost };
 }

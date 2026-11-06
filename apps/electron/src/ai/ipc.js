@@ -102,8 +102,13 @@ async function walkMedia(root, { recursive }) {
 	return files;
 }
 
-function registerAiIpc({ getMainWindow }) {
+function registerAiIpc({ getMainWindow, cloudOrigin = "" }) {
 	ipcMain.handle("ai:chat", async (_event, payload) => {
+		if (String(cloudOrigin || "").trim()) {
+			throw new Error(
+				"Cloud AI mode: chat runs in the renderer against the hosted Mangocut API (not Electron main).",
+			);
+		}
 		const origin =
 			process.env.MANGOCUT_AI_ORIGIN ||
 			process.env.MANGOCUT_DEV_URL ||

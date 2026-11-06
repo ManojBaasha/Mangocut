@@ -3,25 +3,7 @@ import type { EditorCore } from "@/core";
 import { registerCommand } from "@/lib/commands-api/registry";
 import { diffPlanCriteria, parseEditPlan } from "@/lib/ai/agent/plan";
 import { executeCommand } from "@/lib/commands-api/registry";
-import { EDIT_SKILLS } from "@/lib/ai/skills";
-
-function listSkillFiles(): Array<{ id: string; title: string }> {
-	return Object.keys(EDIT_SKILLS)
-		.sort()
-		.map((id) => ({
-			id,
-			title: id
-				.split("-")
-				.map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-				.join(" "),
-		}));
-}
-
-function readSkill({ id }: { id: string }): string | null {
-	const safe = id.replace(/[^a-z0-9-]/gi, "");
-	if (!safe) return null;
-	return EDIT_SKILLS[safe] ?? null;
-}
+import { getEditSkill, listEditSkills } from "@/lib/ai/skills/catalog";
 
 export function registerAgentMetaCommands({
 	editor: _editor,
@@ -95,7 +77,7 @@ export function registerAgentMetaCommands({
 			argsSchema: z.object({}),
 			exposeToAgent: true,
 		},
-		handler: () => ({ ok: true, skills: listSkillFiles() }),
+		handler: () => ({ ok: true, skills: listEditSkills() }),
 	});
 
 	registerCommand({
@@ -108,7 +90,7 @@ export function registerAgentMetaCommands({
 			exposeToAgent: true,
 		},
 		handler: ({ id }) => {
-			const body = readSkill({ id });
+			const body = getEditSkill({ id });
 			if (!body) return { ok: false, reason: `Unknown skill ${id}` };
 			return { ok: true, id, instructions: body };
 		},

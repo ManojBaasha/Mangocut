@@ -176,7 +176,7 @@ function desktopEnv({ port, origin }) {
 		OPENROUTER_API_KEY: merged.OPENROUTER_API_KEY || "",
 		OPENROUTER_ALLOWED_MODELS: merged.OPENROUTER_ALLOWED_MODELS || "",
 		AI_TRIAL_CHAT_TURNS: merged.AI_TRIAL_CHAT_TURNS || "50",
-		AI_REQUIRE_AUTH: merged.AI_REQUIRE_AUTH || "false",
+		AI_REQUIRE_AUTH: merged.AI_REQUIRE_AUTH || "true",
 	};
 }
 
@@ -284,8 +284,17 @@ function stopNextServer() {
 }
 
 app.whenReady().then(async () => {
+	const fileEnv = loadDesktopFileEnv();
+	const cloudOrigin = (
+		process.env.MANGOCUT_CLOUD_ORIGIN ||
+		process.env.NEXT_PUBLIC_MANGOCUT_CLOUD_ORIGIN ||
+		fileEnv.MANGOCUT_CLOUD_ORIGIN ||
+		fileEnv.NEXT_PUBLIC_MANGOCUT_CLOUD_ORIGIN ||
+		""
+	).replace(/\/$/, "");
 	registerAiIpc({
 		getMainWindow: () => mainWindow,
+		cloudOrigin,
 	});
 
 	try {

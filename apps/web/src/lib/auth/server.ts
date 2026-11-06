@@ -100,10 +100,13 @@ export const auth = betterAuth({
 	trustedOrigins: [
 		process.env.BETTER_AUTH_URL || "http://127.0.0.1:3045",
 		process.env.NEXT_PUBLIC_SITE_URL || "",
+		process.env.MANGOCUT_CLOUD_ORIGIN || "",
+		process.env.NEXT_PUBLIC_MANGOCUT_CLOUD_ORIGIN || "",
 		"http://127.0.0.1:3045",
 		"http://localhost:3045",
 		"http://127.0.0.1:47823",
 		"http://localhost:47823",
+		"https://mangocut.jonam.dev",
 	].filter(Boolean),
 	...(isGoogleAuthConfigured
 		? {

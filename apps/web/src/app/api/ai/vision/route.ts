@@ -10,6 +10,23 @@ import {
 	traceUserIdFromKey,
 	type OpenRouterUsage,
 } from "@/lib/ai/observability/server";
+import { parseOpenRouterUsage } from "@/lib/ai/openrouter-usage";
+import { aiCorsPreflight, applyAiCors } from "@/lib/ai/ai-cors";
+
+function json(
+	request: NextRequest,
+	body: unknown,
+	init?: { status?: number },
+) {
+	return applyAiCors({
+		request,
+		response: NextResponse.json(body, init),
+	});
+}
+
+export async function OPTIONS(request: NextRequest) {
+	return aiCorsPreflight({ request });
+}
 
 const MAX_IMAGES = 6;
 const MAX_DATA_URL_CHARS = 1_500_000;
@@ -64,7 +81,7 @@ function countImages(
 export async function POST(request: NextRequest) {
 	const limited = await checkRateLimit({ request });
 	if (limited.limited) {
-		return NextResponse.json(
+		return json(request, 
 			{
 				error: limited.error || "Rate limit exceeded",
 				remaining: limited.remaining,
@@ -76,7 +93,7 @@ export async function POST(request: NextRequest) {
 
 	const apiKey = process.env.OPENROUTER_API_KEY;
 	if (!apiKey) {
-		return NextResponse.json(
+		return json(request, 
 			{ error: "OPENROUTER_API_KEY is not configured on the server" },
 			{ status: 503 },
 		);
@@ -86,7 +103,7 @@ export async function POST(request: NextRequest) {
 	try {
 		body = bodySchema.parse(await request.json());
 	} catch (error) {
-		return NextResponse.json(
+		return json(request, 
 			{
 				error: "Invalid request",
 				details: error instanceof Error ? error.message : String(error),
@@ -96,7 +113,7 @@ export async function POST(request: NextRequest) {
 	}
 
 	if (countImages(body.messages) > MAX_IMAGES) {
-		return NextResponse.json(
+		return json(request, 
 			{ error: `Too many images (max ${MAX_IMAGES})` },
 			{ status: 400 },
 		);
@@ -107,7 +124,7 @@ export async function POST(request: NextRequest) {
 		.map((s) => s.trim())
 		.filter(Boolean);
 	if (allowedModels.length > 0 && !allowedModels.includes(body.model)) {
-		return NextResponse.json({ error: "Model not allowed" }, { status: 400 });
+		return json(request, { error: "Model not allowed" }, { status: 400 });
 	}
 
 	const tracing = isTracingEnabled();
@@ -136,8 +153,8 @@ export async function POST(request: NextRequest) {
 			body: JSON.stringify({
 				model: body.model,
 				messages: body.messages,
+				usage: { include: true },
 				max_tokens: 2048,
-				...(tracing ? { usage: { include: true } } : {}),
 			}),
 		});
 
@@ -155,7 +172,7 @@ export async function POST(request: NextRequest) {
 				statusCode: res.status,
 				responseId: data.id,
 			});
-			return NextResponse.json(
+			return json(request, 
 				{ error: data.error?.message || "OpenRouter request failed" },
 				{ status: res.status },
 			);
@@ -187,21 +204,32 @@ export async function POST(request: NextRequest) {
 			error: text.trim() ? undefined : "Empty vision model response",
 		});
 		if (!text.trim()) {
-			return NextResponse.json(
+			return json(request, 
 				{ error: "Empty vision model response" },
 				{ status: 502 },
 			);
 		}
 
-		const usage = consumeAiTurn({ key: limited.key });
-		return NextResponse.json({
+		const openRouterUsage = parseOpenRouterUsage({ data });
+		const usage = consumeAiTurn({
+			key: limited.key,
+			costUsd: openRouterUsage.costUsd,
+		});
+		return json(request, {
 			text,
-			entitlement: { remaining: usage.remaining, limit: usage.limit },
+			usage: openRouterUsage,
+			entitlement: {
+				remaining: usage.remaining,
+				limit: usage.limit,
+				spentUsd: usage.spentUsd,
+				spendLimitUsd: usage.spendLimitUsd,
+				trialExhausted: usage.trialExhausted,
+			},
 		});
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "OpenRouter request failed";
 		modelCall.finish({ error: message, statusCode: 502 });
-		return NextResponse.json({ error: message }, { status: 502 });
+		return json(request, { error: message }, { status: 502 });
 	}
 }

@@ -14,6 +14,7 @@
 
 - **AI-assisted editing**: Cut, polish, and ship video faster with AI in the flow
 - **Local-first**: Your media stays on your device
+- **Free trial AI**: No payment — AI pauses when the free quota is used; manual editing always works
 - **Simple**: An editor that feels approachable without giving up power
 
 ## Project Structure
@@ -33,13 +34,41 @@
 
 ```bash
 cp apps/web/.env.example apps/web/.env.local
+# Set OPENROUTER_API_KEY, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET
 bun install
+bun run dev:ai
+```
+
+Open [http://127.0.0.1:3045](http://127.0.0.1:3045) (projects). Google OAuth and the packaged app use this same port.
+
+Web-only without AI desktop defaults:
+
+```bash
 bun dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (redirects to `/projects`).
+Open [http://localhost:3000](http://localhost:3000).
+
+### Free AI trial
+
+- Sign in with Google to use AI
+- Quota is controlled by `AI_TRIAL_CHAT_TURNS` and optional `AI_TRIAL_SPEND_USD` (OpenRouter cost)
+- When the trial is over, AI chat stops; timeline editing and export keep working
+- There is no payment or upgrade flow in this version
+- Production / packaged desktop: set `NEXT_PUBLIC_MANGOCUT_CLOUD_ORIGIN` (and `MANGOCUT_CLOUD_ORIGIN`) to your hosted Mangocut so all trial usage lands on one server. Admin dashboard: `/admin` (see `MANGOCUT_ADMIN_EMAIL`).
+
+### Web vs desktop
+
+| | Web | Desktop |
+|---|---|---|
+| Projects / media | This browser only | This Mac only |
+| Cloud project sync | No | No |
+| Free AI trial (hosted) | Yes | Yes |
+| Folder import / ffmpeg tools | No | Yes |
 
 ### Desktop (Electron)
+
+Build:
 
 ```bash
 bun run build:electron
@@ -47,7 +76,9 @@ bun run build:electron
 
 DMG output: `apps/electron/dist/`.
 
-Dev: run `bun dev:web`, then `bun run dev:electron`.
+Unsigned macOS builds: Right-click the app → **Open** the first time (Gatekeeper).
+
+Dev: `bun run dev:ai` (or `bun run dev:ai:request` with the watcher), then `bun run dev:electron` if needed. Packaged and AI-dev both use port **3045**.
 
 ### Local WASM development
 

@@ -28,6 +28,7 @@ export function Header() {
 
 	const links = [
 		{ label: "Projects", href: "/projects" },
+		{ label: "Settings", href: "/settings" },
 		{ label: "Changelog", href: "/changelog" },
 		{ label: "Privacy", href: "/privacy" },
 		{ label: "Terms", href: "/terms" },

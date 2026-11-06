@@ -12,7 +12,6 @@ import { Timeline } from "@/components/editor/panels/timeline";
 import { PreviewPanel } from "@/components/editor/panels/preview";
 import { EditorHeader } from "@/components/editor/editor-header";
 import { EditorProvider } from "@/components/providers/editor-provider";
-import { Onboarding } from "@/components/editor/onboarding";
 import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
 import { usePanelStore } from "@/stores/panel-store";
 import { usePasteMedia } from "@/hooks/use-paste-media";
@@ -23,6 +22,7 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { AiChatSidebar } from "@/components/editor/panels/ai-chat";
+import { WebCapabilityBanner } from "@/components/editor/web-capability-banner";
 
 export default function Editor() {
 	const params = useParams();
@@ -32,6 +32,7 @@ export default function Editor() {
 		<MobileGate>
 			<EditorProvider projectId={projectId}>
 				<div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
+					<WebCapabilityBanner />
 					<DegradedRendererBanner />
 					<EditorHeader />
 					<div className="flex min-h-0 min-w-0 flex-1">
@@ -40,7 +41,6 @@ export default function Editor() {
 						</div>
 						<AiChatSidebar />
 					</div>
-					<Onboarding />
 					<MigrationDialog />
 				</div>
 			</EditorProvider>

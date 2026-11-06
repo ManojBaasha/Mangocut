@@ -178,7 +178,7 @@ export function registerMemoryCommands({ editor }: { editor: EditorCore }): void
 				if (!scene) return { ok: false, reason: "No active scene" };
 				const t =
 					timeSeconds ?? editor.playback.getCurrentTime() / TICKS_PER_SECOND;
-				const candidates = [
+				const candidates: TimelineElement[] = [
 					...scene.tracks.main.elements,
 					...scene.tracks.overlay.flatMap((tr): TimelineElement[] => tr.elements),
 				];

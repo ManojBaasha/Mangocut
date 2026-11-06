@@ -133,7 +133,11 @@ export default function TermsPage() {
 				</p>
 				<ul className="list-disc space-y-2 pl-6">
 					<li>AI output can be wrong, incomplete, or unexpected—review edits before you rely on them</li>
-					<li>AI features may be rate-limited or offered as a free trial</li>
+					<li>
+						AI is offered as a free trial with no payment in this version; when
+						your turn and/or spend quota is used up, AI pauses while manual
+						editing continues
+					</li>
 					<li>We may change models, limits, or availability as the product evolves</li>
 					<li>Do not use AI features to generate or distribute illegal or abusive content</li>
 				</ul>

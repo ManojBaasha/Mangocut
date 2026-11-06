@@ -1,7 +1,7 @@
 import { listAgentTools, executeCommand } from "@/lib/commands-api";
 import { EditorCore } from "@/core";
-import { getDesktopApi, isMangocutDesktop } from "@/lib/ai/desktop";
-import { aiRequestHeaders, getOrCreateDeviceId } from "@/lib/ai/device-id";
+import { isMangocutDesktop } from "@/lib/ai/desktop";
+import { aiFetch } from "@/lib/ai/cloud-fetch";
 import {
 	clearActiveTurn,
 	notePreviewTrace,
@@ -12,8 +12,9 @@ import {
 import type { TraceContext, TurnStatus } from "@/lib/ai/observability/shared";
 
 const SYSTEM_PROMPT = `You are Mangocut AI, an assistant inside a video editor.
-You edit via tools. All timeline mutations apply to the AI Preview (shadow) timeline.
-The user must Accept to commit into the final timeline.
+You edit via tools. All timeline mutations apply to AI changes (shadow timeline), not Main.
+The user reviews Main vs AI changes on the timeline toolbar (Merge / Discard). Do not tell them to use Accept in chat tabs.
+After you make timeline edits, end by asking them to review AI changes on the timeline and reply “yes” if they want you to merge, or merge manually on the timeline.
 Prefer get_project_summary or get_timeline_overview before editing; use get_timeline_detail to drill into clips.
 When the user describes content (not a filename), call search_media first, then place_media with the best mediaId.
 If the user wants media that is already in the project (listed in get_project_summary assets), use place_media with that asset's mediaId or mediaName. Do NOT call import_media_paths for already-imported assets.
@@ -48,7 +49,12 @@ type ToolChip = {
 	detail?: string;
 };
 
-type AgentTurnResult = { assistantText: string; toolChips: ToolChip[] };
+type AgentTurnResult = {
+	assistantText: string;
+	toolChips: ToolChip[];
+	/** OpenRouter cost summed over the turn's model calls. */
+	costUsd: number;
+};
 
 /**
  * Runs one agent turn. Each turn is one Langfuse trace (see
@@ -150,8 +156,8 @@ async function runAgentLoop({
 
 	const toolChips: ToolChip[] = [];
 
-	const desktop = getDesktopApi();
 	let verifyFailStreak = 0;
+	let costUsd = 0;
 
 	for (let step = 0; step < maxSteps; step++) {
 		onStep(step);
@@ -166,9 +172,9 @@ async function runAgentLoop({
 			messages,
 			model,
 			tools,
-			desktop,
 			trace: turn.context(step),
 		});
+		costUsd += response.usage?.costUsd ?? 0;
 
 		const assistant = response.message;
 		messages.push({
@@ -179,7 +185,7 @@ async function runAgentLoop({
 
 		if (!assistant.tool_calls?.length) {
 			return finish(
-				{ assistantText: assistant.content ?? "", toolChips },
+				{ assistantText: assistant.content ?? "", toolChips, costUsd },
 				"completed",
 			);
 		}
@@ -258,8 +264,9 @@ async function runAgentLoop({
 			return finish(
 				{
 					assistantText:
-						"I hit repeated verify failures on the edit plan. Please review the AI Preview, adjust the request, or Accept/Reject what is there.",
+						"I hit repeated verify failures on the edit plan. Please review AI changes on the timeline (Main vs AI changes), then Merge or Discard.",
 					toolChips,
+					costUsd,
 				},
 				"verify_failed",
 			);
@@ -271,6 +278,7 @@ async function runAgentLoop({
 			assistantText:
 				"Stopped after too many tool steps. Try a narrower request.",
 			toolChips,
+			costUsd,
 		},
 		"max_steps",
 	);
@@ -280,13 +288,11 @@ async function callChatApi({
 	messages,
 	model,
 	tools,
-	desktop,
 	trace,
 }: {
 	messages: AgentChatTurn[];
 	model: string;
 	tools: unknown[];
-	desktop: ReturnType<typeof getDesktopApi>;
 	trace: TraceContext;
 }): Promise<{
 	message: {
@@ -294,29 +300,58 @@ async function callChatApi({
 		content: string | null;
 		tool_calls?: AgentChatTurn["tool_calls"];
 	};
+	usage?: { costUsd: number };
 }> {
-	if (isMangocutDesktop() && desktop?.ai?.chat) {
-		// Electron main forwards the body (incl. `trace`) to the local Next server.
-		return desktop.ai.chat({
-			messages,
-			model,
-			tools,
-			trace,
-			deviceId: getOrCreateDeviceId(),
-		} as never);
-	}
-
-	const res = await fetch("/api/ai/chat", {
+	// Same-origin locally and on desktop (renderer is served by the local Next
+	// server); the hosted origin in cloud mode. `trace` correlates the server's
+	// model-call generation with this turn.
+	const res = await aiFetch("/api/ai/chat", {
 		method: "POST",
-		headers: aiRequestHeaders(),
-		credentials: "include",
 		body: JSON.stringify({ messages, model, tools, trace }),
 	});
 	if (!res.ok) {
 		const text = await res.text();
-		throw new Error(text || `Chat proxy failed (${res.status})`);
+		let message = text || `Chat proxy failed (${res.status})`;
+		try {
+			const data = JSON.parse(text) as { error?: string };
+			if (typeof data.error === "string" && data.error.trim()) {
+				message = data.error;
+			}
+		} catch {
+			// keep raw text
+		}
+		throw new Error(message);
 	}
-	return res.json();
+	return normalizeChatResponse(await res.json());
+}
+
+function normalizeChatResponse(data: unknown): {
+	message: {
+		role: string;
+		content: string | null;
+		tool_calls?: AgentChatTurn["tool_calls"];
+	};
+	usage?: { costUsd: number };
+} {
+	const obj = data as {
+		message?: {
+			role: string;
+			content: string | null;
+			tool_calls?: AgentChatTurn["tool_calls"];
+		};
+		usage?: { costUsd?: number };
+	};
+	if (!obj?.message) {
+		throw new Error("Empty model response");
+	}
+	const costUsd =
+		typeof obj.usage?.costUsd === "number" && Number.isFinite(obj.usage.costUsd)
+			? obj.usage.costUsd
+			: 0;
+	return {
+		message: obj.message,
+		usage: { costUsd },
+	};
 }
 
 function summarizeResult(result: unknown): string {

@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "../ui/button";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,25 +18,23 @@ import { DEFAULT_LOGO_URL } from "@/lib/site/brand";
 import { SOCIAL_LINKS } from "@/lib/site/social";
 import { toast } from "sonner";
 import { useEditor } from "@/hooks/use-editor";
-import { CommandIcon, GithubIcon, Logout05Icon } from "@hugeicons/core-free-icons";
+import {
+	CommandIcon,
+	GithubIcon,
+	Logout05Icon,
+	Settings01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "./dialogs/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
 import { useAiChatStore } from "@/stores/ai-chat-store";
-import { isMangocutDesktop } from "@/lib/ai/desktop";
-import { authClient } from "@/lib/auth/client";
 import { Sparkles } from "lucide-react";
+import { Button } from "../ui/button";
 
 export function EditorHeader() {
 	const toggleOpen = useAiChatStore((s) => s.toggleOpen);
 	const isAiOpen = useAiChatStore((s) => s.isOpen);
-	const [showAi, setShowAi] = useState(false);
-	const session = authClient.useSession();
-
-	useEffect(() => {
-		setShowAi(isMangocutDesktop() || Boolean(session.data?.user));
-	}, [session.data?.user]);
 
 	return (
 		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
@@ -46,17 +43,15 @@ export function EditorHeader() {
 				<EditableProjectName />
 			</div>
 			<nav className="flex items-center gap-2">
-				{showAi ? (
-					<Button
-						variant={isAiOpen ? "secondary" : "ghost"}
-						size="sm"
-						className="gap-1.5"
-						onClick={() => toggleOpen()}
-					>
-						<Sparkles className="size-4" />
-						AI
-					</Button>
-				) : null}
+				<Button
+					variant={isAiOpen ? "secondary" : "ghost"}
+					size="sm"
+					className="gap-1.5"
+					onClick={() => toggleOpen()}
+				>
+					<Sparkles className="size-4" />
+					AI
+				</Button>
 				<ExportButton />
 				<ThemeToggle />
 			</nav>
@@ -156,6 +151,10 @@ function ProjectDropdown() {
 						icon={<HugeiconsIcon icon={CommandIcon} />}
 					>
 						Shortcuts
+					</DropdownMenuItem>
+
+					<DropdownMenuItem asChild icon={<HugeiconsIcon icon={Settings01Icon} />}>
+						<Link href="/settings">Settings</Link>
 					</DropdownMenuItem>
 
 					<DropdownMenuSeparator />

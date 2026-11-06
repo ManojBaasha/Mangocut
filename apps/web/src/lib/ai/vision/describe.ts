@@ -5,7 +5,7 @@ import {
 	type VisionFrameMemory,
 } from "./merge";
 import type { CapturedFrame } from "./capture";
-import { aiRequestHeaders } from "@/lib/ai/device-id";
+import { aiFetch } from "@/lib/ai/cloud-fetch";
 import { getActiveTraceContext } from "@/lib/ai/observability/client";
 
 const DEFAULT_VISION_MODEL = "google/gemini-2.5-flash";
@@ -48,10 +48,8 @@ export async function describeCapturedFrames({
 		});
 	}
 
-	const res = await fetch("/api/ai/vision", {
+	const res = await aiFetch("/api/ai/vision", {
 		method: "POST",
-		headers: aiRequestHeaders(),
-		credentials: "include",
 		body: JSON.stringify({
 			model: model || DEFAULT_VISION_MODEL,
 			messages: [
