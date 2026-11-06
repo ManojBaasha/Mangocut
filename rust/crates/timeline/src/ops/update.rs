@@ -261,6 +261,7 @@ mod tests {
             .unwrap(),
             new_ids: vec![],
             ripple: false,
+            validate: true,
         })
         .unwrap()
     }
@@ -275,6 +276,7 @@ mod tests {
                 .unwrap(),
                 new_ids: vec![],
                 ripple: false,
+                validate: true,
             });
             assert_eq!(result.unwrap_err().code, "immutable_field");
         }
@@ -290,6 +292,7 @@ mod tests {
                 .unwrap(),
                 new_ids: vec![],
                 ripple: false,
+                validate: true,
             })
             .unwrap_err()
         };
@@ -313,6 +316,7 @@ mod tests {
             .unwrap(),
             new_ids: vec![],
             ripple: false,
+            validate: true,
         })
         .unwrap();
         let value = serde_json::to_value(&cleared.tracks).unwrap();

@@ -75,6 +75,7 @@ fn run(
         op,
         new_ids: ids.iter().map(|id| id.to_string()).collect(),
         ripple: false,
+        validate: true,
     })
 }
 
@@ -203,6 +204,54 @@ fn overlap_introduced_by_update_is_rejected() {
 }
 
 #[test]
+fn validate_false_accepts_an_overlapping_result() {
+    // Slowing el1 to 0.5x doubles it onto el2.
+    let slow = || {
+        op(json!({"type": "updateElements", "updates": [
+            {"trackId": "main", "elementId": "el1", "patch": {"retime": {"rate": 0.5}}}]}))
+    };
+    let run_with = |validate: bool| {
+        apply_op(ApplyOpOptions {
+            tracks: base_tracks(),
+            op: slow(),
+            new_ids: vec![],
+            ripple: false,
+            validate,
+        })
+    };
+    let strict = run_with(true).unwrap_err();
+    assert_eq!(strict.code, "invalid_result");
+
+    let output = run_with(false).unwrap();
+    assert!(output.changed);
+    let value = serde_json::to_value(&output.tracks).unwrap();
+    assert_eq!(value["main"]["elements"][0]["duration"], 2000);
+    assert_eq!(value["main"]["elements"][0]["retime"]["rate"], 0.5);
+
+    // validate=false skips only the result check: op errors still apply.
+    let unknown = apply_op(ApplyOpOptions {
+        tracks: base_tracks(),
+        op: op(json!({"type": "updateElements", "updates": [
+            {"trackId": "main", "elementId": "nope", "patch": {"opacity": 0}}]})),
+        new_ids: vec![],
+        ripple: false,
+        validate: false,
+    })
+    .unwrap_err();
+    assert_eq!(unknown.code, "element_not_found");
+}
+
+#[test]
+fn validate_defaults_to_true_when_omitted() {
+    let options: ApplyOpOptions = serde_json::from_value(json!({
+        "tracks": serde_json::to_value(base_tracks()).unwrap(),
+        "op": {"type": "toggleTrackMute", "trackId": "main"}
+    }))
+    .unwrap();
+    assert!(options.validate);
+}
+
+#[test]
 fn only_new_violations_are_blamed() {
     // The input already overlaps; an unrelated edit must still go through.
     let broken = scene(
@@ -303,6 +352,7 @@ fn ripple_propagates_instead_of_swallowing() {
             "elements": [{"trackId": "main", "elementId": "el1"}]})),
         new_ids: vec![],
         ripple: true,
+        validate: true,
     })
     .unwrap();
     assert_eq!(output.tracks.main.elements.len(), 1);
@@ -458,6 +508,7 @@ fn malformed_inputs_never_panic() {
                         op: op.clone(),
                         new_ids: (0..8).map(|i| format!("gen-{i}")).collect(),
                         ripple,
+                        validate: true,
                     })
                 }));
                 assert!(

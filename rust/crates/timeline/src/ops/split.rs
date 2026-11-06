@@ -285,6 +285,7 @@ mod tests {
             },
             new_ids: new_ids.iter().map(|id| id.to_string()).collect(),
             ripple: false,
+            validate: true,
         })
         .unwrap()
     }
@@ -323,6 +324,7 @@ mod tests {
             },
             new_ids: vec![],
             ripple: false,
+            validate: true,
         })
         .unwrap_err();
         assert_eq!(error, TimelineError::missing_ids());

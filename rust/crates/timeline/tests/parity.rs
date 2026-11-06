@@ -39,6 +39,7 @@ fn assert_golden(name_prefix: &str) {
             op,
             new_ids,
             ripple,
+            validate: true,
         });
 
         // `expectedError`: TS no-ops on an unknown id (or accepts an invalid

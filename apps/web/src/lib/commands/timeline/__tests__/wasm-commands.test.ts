@@ -1,4 +1,9 @@
 /**
+ * WARNING: this file installs process-global bun module mocks (`@/core`,
+ * `mangocut-wasm`, `@/lib/wasm/timeline`). They stay active for every test
+ * file bun runs after it in the same process; keep other tests independent
+ * of these modules or mock them themselves.
+ *
  * Drives the ported timeline commands (which mutate through the Rust engine
  * via wasm) with the real CommandManager, including ripple and undo/redo.
  *
@@ -83,6 +88,9 @@ mock.module("@/core", () => ({
 const { CommandManager } = await import("@/core/managers/commands");
 const commands = await import("@/lib/commands/timeline");
 const { BatchCommand } = await import("@/lib/commands/batch-command");
+const { withStrictTimelineValidation } = await import(
+	"@/lib/commands/timeline/validation-context"
+);
 const manager = new CommandManager(editorStub as never);
 editorStub.command = manager;
 
@@ -375,7 +383,7 @@ describe("ported element commands", () => {
 		expect(state.tracks).toEqual(before);
 	});
 
-	test("a move onto an occupied span fails with invalid_result and changes nothing", () => {
+	test("a move onto an occupied span: strict (agent) fails, editor allows it", () => {
 		state.tracks.main.elements = [video("a", 0, 1000)] as never;
 		state.tracks.overlay = [
 			{
@@ -388,20 +396,49 @@ describe("ported element commands", () => {
 			},
 		] as never;
 		const before = snapshot();
+		const makeMove = () =>
+			new commands.MoveElementCommand({
+				sourceTrackId: "ov",
+				targetTrackId: "main",
+				elementId: "b",
+				newStartTime: 500,
+			});
+		const strictMove = makeMove();
 		const originalError = console.error;
 		console.error = () => {};
-		const move = new commands.MoveElementCommand({
-			sourceTrackId: "ov",
-			targetTrackId: "main",
-			elementId: "b",
-			newStartTime: 500,
-		});
 		try {
-			manager.execute({ command: move });
+			withStrictTimelineValidation(() => manager.execute({ command: strictMove }));
 		} finally {
 			console.error = originalError;
 		}
-		expect((move.getError() as { code?: string } | null)?.code).toBe("invalid_result");
+		expect((strictMove.getError() as { code?: string } | null)?.code).toBe("invalid_result");
+		expect(state.tracks).toEqual(before);
+
+		// The editor stays as permissive as the pre-port TS command.
+		const editorMove = makeMove();
+		manager.execute({ command: editorMove });
+		expect(editorMove.getError()).toBeNull();
+		expect(state.tracks.main.elements.map((e) => [e.id, e.startTime])).toEqual([
+			["a", 0],
+			["b", 500],
+		]);
+	});
+
+	test("slowing a clip followed by an adjacent clip applies the retime (overlap allowed); undo restores", () => {
+		state.tracks.main.elements = [video("a", 0, 1000), video("b", 1000, 1000)] as never;
+		// sourceDuration 10_000 with trimEnd 9_000 → 1s visible source span.
+		(state.tracks.main.elements[0] as { trimEnd: number }).trimEnd = 9000;
+		const before = snapshot();
+		manager.execute({
+			command: new commands.UpdateElementsCommand({
+				updates: [
+					{ trackId: "main", elementId: "a", patch: { retime: { rate: 0.5 } } as never },
+				],
+			}),
+		});
+		expect(element("main", "a")).toMatchObject({ retime: { rate: 0.5 }, duration: 2000 });
+		expect(element("main", "b")).toMatchObject({ startTime: 1000 });
+		manager.undo();
 		expect(state.tracks).toEqual(before);
 	});
 

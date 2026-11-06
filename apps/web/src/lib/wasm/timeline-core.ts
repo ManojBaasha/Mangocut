@@ -38,6 +38,11 @@ export interface ApplyTimelineOpOptions {
 	 */
 	newIds?: string[];
 	ripple?: boolean;
+	/**
+	 * Reject edits that leave a new invariant violation (`invalid_result`).
+	 * Default true; the editor UI passes false to stay permissive.
+	 */
+	validate?: boolean;
 }
 
 const MIN_ID_POOL = 32;
@@ -107,6 +112,7 @@ export function createTimelineApi(wasm: TimelineWasm) {
 		op,
 		newIds,
 		ripple = false,
+		validate = true,
 	}: ApplyTimelineOpOptions): OpOutput {
 		const cleanTracks = stripUndefined(tracks);
 		const cleanOp = stripUndefined(op);
@@ -116,6 +122,7 @@ export function createTimelineApi(wasm: TimelineWasm) {
 				op: cleanOp,
 				newIds: [...newIds],
 				ripple,
+				validate,
 			});
 		}
 		let poolSize = Math.max(
@@ -128,6 +135,7 @@ export function createTimelineApi(wasm: TimelineWasm) {
 				op: cleanOp,
 				newIds: generateIds(poolSize),
 				ripple,
+				validate,
 			});
 		} catch (error) {
 			if (!(error instanceof TimelineOpError) || error.code !== "missing_ids") {
@@ -139,6 +147,7 @@ export function createTimelineApi(wasm: TimelineWasm) {
 				op: cleanOp,
 				newIds: generateIds(poolSize),
 				ripple,
+				validate,
 			});
 		}
 	}

@@ -6,6 +6,7 @@ import {
 	type TimelineOp,
 	TimelineOpError,
 } from "@/lib/wasm/timeline";
+import { isStrictTimelineValidation } from "./validation-context";
 
 /** A JSON value as the Rust engine takes it (element bodies, patches). */
 export type JsonValue = Extract<TimelineOp, { type: "insertElement" }>["element"];
@@ -78,6 +79,9 @@ function apply({
 		op,
 		ripple,
 		newIds: ids?.get(),
+		// Editor edits stay as permissive as the pre-port TS commands; agent
+		// paths opt into the engine's result validation.
+		validate: isStrictTimelineValidation(),
 	});
 	return {
 		tracks: output.tracks as unknown as SceneTracks,
@@ -92,6 +96,10 @@ function apply({
  * Runs a timeline op through the Rust engine. Never throws: unknown
  * track/element ids are a silent no-op (as the old TS commands were), any
  * other failure is logged and the state is left unchanged.
+ *
+ * Result validation (overlaps etc.) runs only inside
+ * `withStrictTimelineValidation` (agent paths); the editor UI stays
+ * permissive like the old TS commands.
  *
  * Without `ids` the wrapper generates (and sizes) a throwaway id pool.
  */

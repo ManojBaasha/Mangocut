@@ -270,6 +270,7 @@ mod tests {
             op,
             new_ids: ids.iter().map(|id| id.to_string()).collect(),
             ripple: false,
+            validate: true,
         })
     }
 

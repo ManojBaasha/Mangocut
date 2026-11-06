@@ -6,6 +6,7 @@ import { invokeAction } from "@/lib/actions";
 import type { TAction } from "@/lib/actions/definitions";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TimelineOpError } from "@/lib/wasm/timeline";
+import { withStrictTimelineValidation } from "@/lib/commands/timeline/validation-context";
 import { getElementsAtTime } from "@/lib/timeline";
 import type { TimelineElement } from "@/lib/timeline";
 import {
@@ -331,12 +332,14 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
-				const error = editor.timeline.moveElement({
-					sourceTrackId: args.sourceTrackId,
-					targetTrackId: args.targetTrackId ?? args.sourceTrackId,
-					elementId: args.elementId,
-					newStartTime: args.newStartTimeSeconds * TICKS_PER_SECOND,
-				});
+				const error = withStrictTimelineValidation(() =>
+					editor.timeline.moveElement({
+						sourceTrackId: args.sourceTrackId,
+						targetTrackId: args.targetTrackId ?? args.sourceTrackId,
+						elementId: args.elementId,
+						newStartTime: args.newStartTimeSeconds * TICKS_PER_SECOND,
+					}),
+				);
 				if (error) {
 					const code = error instanceof TimelineOpError ? error.code : "move_failed";
 					const hint = error instanceof TimelineOpError ? error.hint : undefined;

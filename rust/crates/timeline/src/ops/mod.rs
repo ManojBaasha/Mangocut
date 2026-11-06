@@ -155,6 +155,18 @@ pub struct ApplyOpOptions {
     pub new_ids: Vec<String>,
     #[serde(default)]
     pub ripple: bool,
+    /// Reject edits that leave a new invariant violation (overlap, invalid
+    /// trim/duration...) with `invalid_result`. Defaults to true (agents);
+    /// the editor UI passes false to keep its pre-port permissiveness. Errors
+    /// raised by the ops themselves (unknown ids, immutable fields, ids)
+    /// still apply.
+    #[serde(default = "default_true")]
+    #[cfg_attr(feature = "wasm", tsify(optional))]
+    pub validate: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
@@ -209,6 +221,7 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
         op,
         new_ids,
         ripple,
+        validate,
     } = options;
     check_new_ids(&tracks, &new_ids)?;
     let mut ids = IdSource::new(new_ids);
@@ -221,7 +234,9 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
     }
     let changed = next != tracks;
     // Blame only violations the input did not already have.
-    if changed && let Some(violation) = crate::validate::first_new_violation(&tracks, &next) {
+    if validate
+        && changed
+        && let Some(violation) = crate::validate::first_new_violation(&tracks, &next) {
         let error = violation.into_error();
         return Err(TimelineError::invalid_result(
             format!(

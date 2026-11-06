@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import { toOpenRouterTool } from "./types";
 import type { z } from "zod";
+import { withStrictTimelineValidation } from "@/lib/commands/timeline/validation-context";
 
 const registry = new Map<string, RegisteredCommand>();
 
@@ -76,7 +77,12 @@ export async function executeCommand<TResult = unknown>({
 
 	const parsed = command.argsSchema.parse(args ?? {});
 	const ctx: CommandContext = { target };
-	return (await command.handler(parsed, ctx)) as TResult;
+	// Command API calls (agent and tools) get strict timeline validation for
+	// the edits their handler makes synchronously (incl. via runOnShadow).
+	// Handlers that edit after an await must wrap those edits themselves.
+	return (await withStrictTimelineValidation(() =>
+		command.handler(parsed, ctx),
+	)) as TResult;
 }
 
 export function clearCommandRegistry(): void {
