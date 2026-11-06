@@ -1,40 +1,26 @@
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
 import { z } from "zod";
 import type { EditorCore } from "@/core";
 import { registerCommand } from "@/lib/commands-api/registry";
 import { diffPlanCriteria, parseEditPlan } from "@/lib/ai/agent/plan";
 import { executeCommand } from "@/lib/commands-api/registry";
-
-const SKILLS_DIR = path.join(import.meta.dir, "../ai/skills");
+import { EDIT_SKILLS } from "@/lib/ai/skills";
 
 function listSkillFiles(): Array<{ id: string; title: string }> {
-	try {
-		return readdirSync(SKILLS_DIR)
-			.filter((f) => f.endsWith(".txt"))
-			.map((f) => {
-				const id = f.replace(/\.txt$/, "");
-				return {
-					id,
-					title: id
-						.split("-")
-						.map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-						.join(" "),
-				};
-			});
-	} catch {
-		return [];
-	}
+	return Object.keys(EDIT_SKILLS)
+		.sort()
+		.map((id) => ({
+			id,
+			title: id
+				.split("-")
+				.map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+				.join(" "),
+		}));
 }
 
 function readSkill({ id }: { id: string }): string | null {
 	const safe = id.replace(/[^a-z0-9-]/gi, "");
 	if (!safe) return null;
-	try {
-		return readFileSync(path.join(SKILLS_DIR, `${safe}.txt`), "utf8");
-	} catch {
-		return null;
-	}
+	return EDIT_SKILLS[safe] ?? null;
 }
 
 export function registerAgentMetaCommands({

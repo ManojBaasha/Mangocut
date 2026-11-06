@@ -4,14 +4,14 @@ import { registerCommand } from "@/lib/commands-api/registry";
 import { searchMediaAssets } from "@/lib/ai/memory/search-media";
 import { captureAssetFrames } from "@/lib/ai/vision/capture";
 import { describeCapturedFrames } from "@/lib/ai/vision/describe";
-import { TICKS_PER_SECOND } from "@/lib/timeline";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import type { TimelineElement } from "@/lib/timeline";
 
 function withTarget<T>(
 	editor: EditorCore,
 	target: "final" | "shadow",
 	fn: () => T,
-): T {
+): T | Promise<T> {
 	if (target === "shadow") {
 		return editor.shadow.runOnShadow(fn);
 	}
@@ -180,7 +180,7 @@ export function registerMemoryCommands({ editor }: { editor: EditorCore }): void
 					timeSeconds ?? editor.playback.getCurrentTime() / TICKS_PER_SECOND;
 				const candidates = [
 					...scene.tracks.main.elements,
-					...scene.tracks.overlay.flatMap((tr) => tr.elements),
+					...scene.tracks.overlay.flatMap((tr): TimelineElement[] => tr.elements),
 				];
 				const el = findElementAtTime({ elements: candidates, timeSeconds: t });
 				if (!el || !("mediaId" in el) || !el.mediaId) {
@@ -280,7 +280,7 @@ export function registerMemoryCommands({ editor }: { editor: EditorCore }): void
 					? findElementAtTime({
 							elements: [
 								...scene.tracks.main.elements,
-								...scene.tracks.overlay.flatMap((tr) => tr.elements),
+								...scene.tracks.overlay.flatMap((tr): TimelineElement[] => tr.elements),
 							],
 							timeSeconds: t,
 						})

@@ -1,5 +1,8 @@
 import type { MediaAssetData } from "@/services/storage/types";
 
+/** Searchable asset fields; runtime MediaAsset and stored MediaAssetData both satisfy it. */
+type SearchableAsset = Omit<MediaAssetData, "size" | "lastModified">;
+
 export interface MediaSearchHit {
 	mediaId: string;
 	name: string;
@@ -42,7 +45,7 @@ export function tokenizeQuery({ query }: { query: string }): string[] {
 		.filter((t) => t.length >= 2 && !STOP.has(t));
 }
 
-function collectCorpus({ asset }: { asset: MediaAssetData }): {
+function collectCorpus({ asset }: { asset: SearchableAsset }): {
 	name: string;
 	vision: string;
 	transcript: string;
@@ -66,7 +69,7 @@ export function searchMediaAssets({
 	query,
 	limit = 8,
 }: {
-	assets: MediaAssetData[];
+	assets: SearchableAsset[];
 	query: string;
 	limit?: number;
 }): MediaSearchHit[] {
