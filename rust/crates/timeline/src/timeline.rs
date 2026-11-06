@@ -1,5 +1,6 @@
 //! Timeline model and operations.
 
+mod animation_split;
 mod error;
 mod model;
 mod ops;

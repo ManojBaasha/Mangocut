@@ -1,0 +1,133 @@
+{
+  "name": "split_retimed_fractional",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 100000,
+          "startTime": 0,
+          "trimStart": 1000,
+          "trimEnd": 2000,
+          "sourceDuration": 400000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "retime": {
+            "rate": 1.1,
+            "maintainPitch": true
+          }
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  },
+  "op": {
+    "type": "splitElements",
+    "elements": [
+      {
+        "trackId": "main",
+        "elementId": "el-1"
+      }
+    ],
+    "splitTime": 33333
+  },
+  "newIds": [
+    "right-1"
+  ],
+  "ripple": false,
+  "expected": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4 (left)",
+          "duration": 33333,
+          "startTime": 0,
+          "trimStart": 1000,
+          "trimEnd": 75333.70000000001,
+          "sourceDuration": 400000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "retime": {
+            "rate": 1.1,
+            "maintainPitch": true
+          }
+        },
+        {
+          "type": "video",
+          "id": "right-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4 (right)",
+          "duration": 66667,
+          "startTime": 33333,
+          "trimStart": 37666.3,
+          "trimEnd": 2000,
+          "sourceDuration": 400000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "retime": {
+            "rate": 1.1,
+            "maintainPitch": true
+          }
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  }
+}

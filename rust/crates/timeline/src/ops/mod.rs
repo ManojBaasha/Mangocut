@@ -1,6 +1,7 @@
 //! The single entry point for timeline edits.
 
 mod insert;
+mod split;
 
 use bridge::export;
 use serde::{Deserialize, Serialize};
@@ -162,12 +163,18 @@ pub struct OpOutput {
 }
 
 /// Hands out `new_ids` in order.
-struct IdSource {
+pub(crate) struct IdSource {
     ids: std::vec::IntoIter<String>,
 }
 
 impl IdSource {
-    fn next(&mut self) -> Result<String, TimelineError> {
+    pub(crate) fn new(ids: Vec<String>) -> Self {
+        Self {
+            ids: ids.into_iter(),
+        }
+    }
+
+    pub(crate) fn next(&mut self) -> Result<String, TimelineError> {
         self.ids.next().ok_or_else(TimelineError::missing_ids)
     }
 }
@@ -197,9 +204,7 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
         // Ripple is applied by the element ops (Task 5+); track ops never ripple.
         ripple: _,
     } = options;
-    let mut ids = IdSource {
-        ids: new_ids.into_iter(),
-    };
+    let mut ids = IdSource::new(new_ids);
     let mut next = tracks.clone();
     let applied = apply(&mut next, &op, &mut ids)?;
     let changed = next != tracks;
@@ -249,7 +254,11 @@ fn apply(
         TimelineOp::InsertElement { element, placement } => {
             insert::insert(tracks, element, placement, ids)
         }
-        TimelineOp::SplitElements { .. } => Err(TimelineError::unsupported_op("splitElements")),
+        TimelineOp::SplitElements {
+            elements,
+            split_time,
+            retain_side,
+        } => split::split(tracks, elements, *split_time, *retain_side, ids),
         TimelineOp::TrimElement { .. } => Err(TimelineError::unsupported_op("trimElement")),
         TimelineOp::RetimeElement { .. } => Err(TimelineError::unsupported_op("retimeElement")),
         TimelineOp::MoveElement { .. } => Err(TimelineError::unsupported_op("moveElement")),

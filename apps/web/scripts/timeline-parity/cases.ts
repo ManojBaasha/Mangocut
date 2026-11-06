@@ -1,5 +1,12 @@
 import type { SceneTracks } from "../../src/lib/timeline/types";
 import type { TimelineOp } from "./harness";
+import type { ElementAnimations } from "../../src/lib/animation/types";
+
+// App modules must load after the harness has installed its wasm plugin and
+// id mock, so import them dynamically, harness first.
+await import("./harness");
+const { updateScalarKeyframeCurve, upsertElementKeyframe, upsertPathKeyframe } =
+	await import("../../src/lib/animation");
 
 export interface ParityCase {
 	name: string;
@@ -116,6 +123,163 @@ const emptyMainScene: SceneTracks = scene({
 		hidden: false,
 	} as SceneTracks["main"],
 });
+
+function mainTrack(elements: unknown[]): SceneTracks["main"] {
+	return {
+		id: "main",
+		name: "Main Track",
+		type: "video",
+		elements,
+		muted: false,
+		hidden: false,
+	} as SceneTracks["main"];
+}
+
+const splitScene: SceneTracks = scene({
+	main: mainTrack([
+		videoElement({ id: "el-1" }),
+		videoElement({ id: "el-2", startTime: 120000, duration: 60000 }),
+	]),
+	audio: [
+		{
+			id: "audio-1",
+			name: "Audio track",
+			type: "audio",
+			elements: [
+				{
+					type: "audio",
+					sourceType: "library",
+					sourceUrl: "https://example.com/a.mp3",
+					name: "Song",
+					id: "au-1",
+					startTime: 10000,
+					duration: 50000,
+					trimStart: 500,
+					trimEnd: 700,
+					volume: 1,
+				},
+			],
+			muted: false,
+		},
+	] as SceneTracks["audio"],
+});
+
+function retimedScene({
+	rate,
+	duration,
+	trimStart,
+	trimEnd,
+}: {
+	rate: number;
+	duration: number;
+	trimStart: number;
+	trimEnd: number;
+}): SceneTracks {
+	return scene({
+		main: mainTrack([
+			{
+				...videoElement({ id: "el-1", duration }),
+				trimStart,
+				trimEnd,
+				sourceDuration: 400000,
+				retime: { rate, maintainPitch: true },
+			},
+		]),
+	});
+}
+
+/**
+ * Real keyframe data built with the app's own helpers (explicit keyframe ids so
+ * the fixture is deterministic). Bindings are inserted non-alphabetically so
+ * the golden proves boundary-id consumption follows insertion order.
+ */
+function buildSplitAnimations(): ElementAnimations | undefined {
+	let animations: ElementAnimations | undefined;
+	const scalarKeys: [string, number, number, "linear" | "bezier"][] = [
+		["px-0", 0, 0, "linear"],
+		["px-1", 30000, 100, "bezier"],
+		["px-2", 90000, 200, "linear"],
+		["px-3", 120000, 50, "linear"],
+	];
+	for (const [keyframeId, time, value, interpolation] of scalarKeys) {
+		animations = upsertElementKeyframe({
+			animations,
+			propertyPath: "transform.positionX",
+			time,
+			value,
+			interpolation,
+			keyframeId,
+		});
+	}
+	animations = updateScalarKeyframeCurve({
+		animations,
+		propertyPath: "transform.positionX",
+		componentKey: "value",
+		keyframeId: "px-1",
+		patch: { rightHandle: { dt: 20000, dv: 80 } },
+	});
+	animations = updateScalarKeyframeCurve({
+		animations,
+		propertyPath: "transform.positionX",
+		componentKey: "value",
+		keyframeId: "px-2",
+		patch: { leftHandle: { dt: -10000, dv: -30 } },
+	});
+	animations = upsertElementKeyframe({
+		animations,
+		propertyPath: "opacity",
+		time: 10000,
+		value: 1,
+		interpolation: "linear",
+		keyframeId: "op-0",
+	});
+	animations = upsertElementKeyframe({
+		animations,
+		propertyPath: "opacity",
+		time: 100000,
+		value: 0.25,
+		interpolation: "linear",
+		keyframeId: "op-1",
+	});
+	for (const [keyframeId, time, value] of [
+		["c-0", 20000, "#ff0000"],
+		["c-1", 70000, "#0000ff"],
+	] as const) {
+		animations = upsertElementKeyframe({
+			animations,
+			propertyPath: "color",
+			time,
+			value,
+			interpolation: "linear",
+			keyframeId,
+		});
+	}
+	for (const [keyframeId, time, value] of [
+		["m-0", 0, "a"],
+		["m-1", 45000, "b"],
+		["m-2", 80000, "c"],
+	] as const) {
+		animations = upsertPathKeyframe({
+			animations,
+			propertyPath: "params.mode",
+			time,
+			value,
+			keyframeId,
+			kind: "discrete",
+			defaultInterpolation: "hold",
+			coerceValue: ({ value: next }) => next,
+		});
+	}
+	return animations;
+}
+
+const animatedScene: SceneTracks = scene({
+	main: mainTrack([
+		{ ...videoElement({ id: "el-1" }), animations: buildSplitAnimations() },
+	]),
+});
+
+const splitEl1 = [{ trackId: "main", elementId: "el-1" }];
 
 export const cases: ParityCase[] = [
 	{
@@ -238,5 +402,82 @@ export const cases: ParityCase[] = [
 			placement: { mode: "explicit", trackId: "text-1" },
 		},
 		newIds: ["new-el"],
+	},
+	{
+		name: "split_plain_both",
+		input: splitScene,
+		op: {
+			type: "splitElements",
+			elements: [
+				{ trackId: "audio-1", elementId: "au-1" },
+				{ trackId: "main", elementId: "el-1" },
+				{ trackId: "main", elementId: "missing" },
+				{ trackId: "audio-1", elementId: "el-2" },
+			],
+			splitTime: 30000,
+		},
+		newIds: ["right-main", "right-audio"],
+	},
+	{
+		name: "split_left",
+		input: splitScene,
+		op: {
+			type: "splitElements",
+			elements: splitEl1,
+			splitTime: 30000,
+			retainSide: "left",
+		},
+		newIds: [],
+	},
+	{
+		name: "split_right",
+		input: splitScene,
+		op: {
+			type: "splitElements",
+			elements: splitEl1,
+			splitTime: 30000,
+			retainSide: "right",
+		},
+		newIds: ["right-1"],
+	},
+	{
+		name: "split_retimed_rate_2",
+		input: retimedScene({ rate: 2, duration: 60000, trimStart: 1000, trimEnd: 2000 }),
+		op: { type: "splitElements", elements: splitEl1, splitTime: 25000 },
+		newIds: ["right-1"],
+	},
+	{
+		name: "split_retimed_fractional",
+		input: retimedScene({ rate: 1.1, duration: 100000, trimStart: 1000, trimEnd: 2000 }),
+		op: { type: "splitElements", elements: splitEl1, splitTime: 33333 },
+		newIds: ["right-1"],
+	},
+	{
+		name: "split_at_start_unchanged",
+		input: splitScene,
+		op: { type: "splitElements", elements: splitEl1, splitTime: 0 },
+		newIds: ["right-1"],
+	},
+	{
+		name: "split_at_end_unchanged",
+		input: splitScene,
+		op: { type: "splitElements", elements: splitEl1, splitTime: 120000 },
+		newIds: ["right-1"],
+	},
+	{
+		name: "split_keeps_keyframes_on_correct_side",
+		input: animatedScene,
+		op: { type: "splitElements", elements: splitEl1, splitTime: 60000 },
+		newIds: [
+			"px-left",
+			"px-right",
+			"op-left",
+			"op-right",
+			"c-left",
+			"c-right",
+			"m-left",
+			"m-right",
+			"right-1",
+		],
 	},
 ];

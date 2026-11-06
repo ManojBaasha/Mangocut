@@ -67,3 +67,8 @@ fn track_ops_match_ts() {
 fn insert_matches_ts() {
     assert_golden("insert_");
 }
+
+#[test]
+fn split_matches_ts() {
+    assert_golden("split_");
+}

@@ -10,7 +10,10 @@ crate-type = ["rlib"]
 [dependencies]
 bridge = { version = "0.1.0", path = "../bridge" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# preserve_order: animation bindings are iterated in insertion order (like
+# `Object.entries`), which decides keyframe id consumption order.
+# float_roundtrip: parse JSON floats exactly, so goldens compare bit-for-bit.
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
 time = { version = "0.1.0", path = "../time" }
 tsify-next = { version = "0.5", optional = true }
