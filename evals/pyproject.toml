@@ -1,0 +1,12 @@
+[project]
+name = "mangocut-evals"
+version = "0.1.0"
+description = "DeepEval harness that scores Mangocut agent traces recorded in local Langfuse"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "deepeval==4.3.3",
+    "langfuse>=3,<5",
+]
+
+[tool.uv]
+package = false
