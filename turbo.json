@@ -1,5 +1,12 @@
 {
 	"$schema": "https://turborepo.com/schema.json",
+	"globalDependencies": [
+		"rust/**",
+		"!rust/wasm/pkg/**",
+		"!rust/wasm/pkg-node/**",
+		"Cargo.toml",
+		"Cargo.lock"
+	],
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
