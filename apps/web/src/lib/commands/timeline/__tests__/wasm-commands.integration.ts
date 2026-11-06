@@ -1,8 +1,11 @@
 /**
+ * Integration test: not picked up by the default `bun test` (no `.test.`
+ * in the name). Run it with `bun run test:integration`, which builds the
+ * Node wasm package first and runs this file in its own bun process.
+ *
  * WARNING: this file installs process-global bun module mocks (`@/core`,
  * `mangocut-wasm`, `@/lib/wasm/timeline`). They stay active for every test
- * file bun runs after it in the same process; keep other tests independent
- * of these modules or mock them themselves.
+ * file bun runs after it in the same process, so it gets a process alone.
  *
  * Drives the ported timeline commands (which mutate through the Rust engine
  * via wasm) with the real CommandManager, including ripple and undo/redo.

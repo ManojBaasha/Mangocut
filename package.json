@@ -24,6 +24,7 @@
     "lint:web:fix": "biome lint apps/web/src --write --unsafe --max-diagnostics=1000",
     "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
     "test": "bun test",
+    "test:integration": "bun run build:wasm:node && bun test ./apps/web/src/lib/wasm/__tests__/node-smoke.integration.ts ./apps/web/src/lib/wasm/__tests__/timeline-core.integration.ts && bun test ./apps/web/src/lib/commands/timeline/__tests__/wasm-commands.integration.ts",
     "test:parity": "bun run build:wasm:node && bun test ./apps/web/scripts/timeline-parity/generate.parity.ts ./apps/web/scripts/timeline-parity/harness.parity.ts"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+// Integration test (needs rust/wasm/pkg-node): run via `bun run test:integration`.
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
