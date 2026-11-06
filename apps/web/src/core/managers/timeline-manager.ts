@@ -161,7 +161,7 @@ export class TimelineManager {
 		elementId: string;
 		newStartTime: number;
 		createTrack?: { type: TrackType; index: number };
-	}): void {
+	}): Error | null {
 		const command = new MoveElementCommand({
 			sourceTrackId,
 			targetTrackId,
@@ -170,6 +170,7 @@ export class TimelineManager {
 			createTrack,
 		});
 		this.editor.command.execute({ command });
+		return command.getError();
 	}
 
 	toggleTrackMute({ trackId }: { trackId: string }): void {

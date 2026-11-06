@@ -22,7 +22,7 @@ const nodePkg = resolve(
 if (!existsSync(nodePkg)) {
 	throw new Error(`${nodePkg} is missing; run \`bun run build:wasm:node\``);
 }
-// biome-ignore lint/style/noCommonJs: the node wasm build is CommonJS
+// The node wasm build is CommonJS.
 const nodeWasm = require(nodePkg);
 const gpuOnly = [
 	"applyEffectPasses",
@@ -170,5 +170,360 @@ describe("ported track commands", () => {
 		manager.execute({ command: new commands.RemoveTrackCommand("nope") });
 		manager.execute({ command: new commands.ToggleTrackMuteCommand("nope") });
 		expect(state.tracks).toEqual(before);
+	});
+});
+
+function createVideo(startTime: number, duration: number) {
+	const { id: _id, ...rest } = video("unused", startTime, duration);
+	return { ...rest, name: "clip" };
+}
+
+describe("ported element commands", () => {
+	test("insert, split, trim, move to a new track, ripple delete; undo all, redo all", () => {
+		const states: SceneTracks[] = [snapshot()];
+
+		// 1. insert a 4s video at 0 on the main track.
+		const insert = new commands.InsertElementCommand({
+			element: createVideo(0, 4000) as never,
+			placement: { mode: "auto" },
+		});
+		manager.execute({ command: insert });
+		const clipId = insert.getElementId();
+		expect(insert.getTrackId()).toBe("main");
+		expect(state.selection).toEqual([{ trackId: "main", elementId: clipId }]);
+		expect(state.tracks.main.elements.map((e) => [e.id, e.startTime, e.duration])).toEqual([
+			[clipId, 0, 4000],
+		]);
+		states.push(snapshot());
+
+		// 2. split at 2s.
+		const split = new commands.SplitElementsCommand({
+			elements: [{ trackId: "main", elementId: clipId }],
+			splitTime: 2000,
+		});
+		manager.execute({ command: split });
+		const [right] = split.getRightSideElements();
+		expect(right.trackId).toBe("main");
+		expect(state.selection).toEqual([right]);
+		expect(
+			state.tracks.main.elements.map((e) => [e.id, e.startTime, e.duration, e.trimStart, e.trimEnd]),
+		).toEqual([
+			[clipId, 0, 2000, 0, 2000],
+			[right.elementId, 2000, 2000, 2000, 0],
+		]);
+		states.push(snapshot());
+
+		// 3. trim both halves (left loses its tail, right loses its head).
+		manager.execute({
+			command: new commands.UpdateElementsCommand({
+				updates: [
+					{ trackId: "main", elementId: clipId, patch: { trimEnd: 2500, duration: 1500 } },
+					{
+						trackId: "main",
+						elementId: right.elementId,
+						patch: { trimStart: 2500, startTime: 2500, duration: 1500 },
+					},
+				],
+			}),
+		});
+		expect(element("main", clipId)).toMatchObject({ duration: 1500, trimEnd: 2500 });
+		expect(element("main", right.elementId)).toMatchObject({
+			startTime: 2500,
+			duration: 1500,
+			trimStart: 2500,
+		});
+		states.push(snapshot());
+
+		// 4. move the right half onto a new overlay video track at 6s.
+		const move = new commands.MoveElementCommand({
+			sourceTrackId: "main",
+			targetTrackId: "new-track",
+			elementId: right.elementId,
+			newStartTime: 6000,
+			createTrack: { type: "video", index: 0 },
+		});
+		manager.execute({ command: move });
+		expect(move.getError()).toBeNull();
+		expect(state.tracks.overlay.map((t) => t.id)).toEqual(["new-track"]);
+		expect(element("new-track", right.elementId)).toMatchObject({ startTime: 6000 });
+		expect(state.tracks.main.elements.map((e) => e.id)).toEqual([clipId]);
+		states.push(snapshot());
+
+		// 5. ripple on: add a clip after the left half, then delete the left half.
+		manager.isRippleEnabled = true;
+		const second = new commands.InsertElementCommand({
+			element: createVideo(1500, 1000) as never,
+			placement: { mode: "explicit", trackId: "main" },
+		});
+		manager.execute({ command: second });
+		states.push(snapshot());
+		manager.execute({
+			command: new commands.DeleteElementsCommand({
+				elements: [{ trackId: "main", elementId: clipId }],
+			}),
+		});
+		expect(state.selection).toEqual([]);
+		// Ripple closes the gap once: the second clip slides from 1.5s to 0.
+		expect(state.tracks.main.elements.map((e) => [e.id, e.startTime])).toEqual([
+			[second.getElementId(), 0],
+		]);
+		// Ripple is per track: the overlay clip stays at 6s.
+		expect(element("new-track", right.elementId)).toMatchObject({ startTime: 6000 });
+		states.push(snapshot());
+
+		// Undo everything, checking each intermediate state exactly.
+		for (let index = states.length - 2; index >= 0; index--) {
+			manager.undo();
+			expect(state.tracks).toEqual(states[index]);
+		}
+		// Redo everything: ids are stable across redo, so states match exactly.
+		// Redo ripples with the current setting (as before), so match the
+		// setting each step originally ran with.
+		for (let index = 1; index < states.length; index++) {
+			manager.isRippleEnabled = index >= 5;
+			manager.redo();
+			expect(state.tracks).toEqual(states[index]);
+		}
+	});
+
+	test("duplicate selects copies on a new track and redoes identically", () => {
+		state.tracks.main.elements = [video("a", 0, 1000)] as never;
+		const duplicate = new commands.DuplicateElementsCommand({
+			elements: [{ trackId: "main", elementId: "a" }],
+		});
+		manager.execute({ command: duplicate });
+		const copies = duplicate.getDuplicatedElements();
+		expect(copies).toHaveLength(1);
+		expect(state.selection).toEqual(copies);
+		expect(element(copies[0].trackId, copies[0].elementId)).toMatchObject({
+			name: "a (copy)",
+			startTime: 0,
+		});
+		const after = snapshot();
+		manager.undo();
+		manager.redo();
+		expect(state.tracks).toEqual(after);
+	});
+
+	test("an undefined patch value clears the field (retime)", () => {
+		state.tracks.main.elements = [video("a", 0, 1000)] as never;
+		const update = (patch: Record<string, unknown>) =>
+			manager.execute({
+				command: new commands.UpdateElementsCommand({
+					updates: [{ trackId: "main", elementId: "a", patch: patch as never }],
+				}),
+			});
+		update({ retime: { rate: 2 } });
+		expect(element("main", "a")).toMatchObject({ retime: { rate: 2 }, duration: 5000 });
+		update({ retime: undefined });
+		expect(element("main", "a")).not.toHaveProperty("retime");
+		expect(element("main", "a")).toMatchObject({ duration: 10_000 });
+	});
+
+	test("updates skip unknown refs and apply the rest", () => {
+		state.tracks.main.elements = [video("a", 0, 1000)] as never;
+		manager.execute({
+			command: new commands.UpdateElementsCommand({
+				updates: [
+					{ trackId: "main", elementId: "gone", patch: { opacity: 0.1 } as never },
+					{ trackId: "main", elementId: "a", patch: { opacity: 0.5 } as never },
+				],
+			}),
+		});
+		expect(element("main", "a")).toMatchObject({ opacity: 0.5 });
+	});
+
+	test("direct execute (live preview, no history) never ripples", () => {
+		manager.isRippleEnabled = true;
+		state.tracks.main.elements = [video("a", 0, 1000), video("b", 1000, 1000)] as never;
+		new commands.UpdateElementsCommand({
+			updates: [{ trackId: "main", elementId: "a", patch: { duration: 500 } as never }],
+		}).execute();
+		expect(element("main", "b")).toMatchObject({ startTime: 1000 });
+	});
+
+	test("unknown ids are a silent no-op", () => {
+		state.tracks.main.elements = [video("a", 0, 1000)] as never;
+		const before = snapshot();
+		const errors: unknown[] = [];
+		const originalError = console.error;
+		console.error = (...args: unknown[]) => errors.push(args);
+		try {
+			manager.execute({
+				command: new commands.DeleteElementsCommand({
+					elements: [{ trackId: "main", elementId: "nope" }],
+				}),
+			});
+			manager.execute({
+				command: new commands.SplitElementsCommand({
+					elements: [{ trackId: "nope", elementId: "a" }],
+					splitTime: 500,
+				}),
+			});
+			const move = new commands.MoveElementCommand({
+				sourceTrackId: "main",
+				targetTrackId: "main",
+				elementId: "nope",
+				newStartTime: 0,
+			});
+			manager.execute({ command: move });
+			expect((move.getError() as { code?: string } | null)?.code).toBe("element_not_found");
+		} finally {
+			console.error = originalError;
+		}
+		expect(errors).toEqual([]);
+		expect(state.tracks).toEqual(before);
+	});
+
+	test("a move onto an occupied span fails with invalid_result and changes nothing", () => {
+		state.tracks.main.elements = [video("a", 0, 1000)] as never;
+		state.tracks.overlay = [
+			{
+				id: "ov",
+				name: "Video",
+				type: "video",
+				muted: false,
+				hidden: false,
+				elements: [video("b", 0, 1000)],
+			},
+		] as never;
+		const before = snapshot();
+		const originalError = console.error;
+		console.error = () => {};
+		const move = new commands.MoveElementCommand({
+			sourceTrackId: "ov",
+			targetTrackId: "main",
+			elementId: "b",
+			newStartTime: 500,
+		});
+		try {
+			manager.execute({ command: move });
+		} finally {
+			console.error = originalError;
+		}
+		expect((move.getError() as { code?: string } | null)?.code).toBe("invalid_result");
+		expect(state.tracks).toEqual(before);
+	});
+
+	test("batch add-track + insert onto it, with a mixed batch rippling once", () => {
+		const addTrack = new commands.AddTrackCommand("text", 0);
+		const insert = new commands.InsertElementCommand({
+			element: {
+				type: "text",
+				name: "Title",
+				content: "Hello",
+				startTime: 0,
+				duration: 1000,
+				trimStart: 0,
+				trimEnd: 0,
+				fontSize: 48,
+				fontFamily: "Arial",
+				color: "#fff",
+				background: { enabled: false, color: "#000" },
+				textAlign: "center",
+				fontWeight: "normal",
+				fontStyle: "normal",
+				textDecoration: "none",
+				hidden: false,
+				transform,
+				opacity: 1,
+				blendMode: "normal",
+			} as never,
+			placement: { mode: "explicit", trackId: addTrack.getTrackId() },
+		});
+		const batch = new BatchCommand([addTrack, insert]);
+		expect(batch.handlesRipple).toBe(true);
+		manager.execute({ command: batch });
+		expect(state.tracks.overlay.map((t) => t.id)).toEqual([addTrack.getTrackId()]);
+		expect(element(addTrack.getTrackId(), insert.getElementId())).toBeDefined();
+		expect(state.selection).toEqual([
+			{ trackId: addTrack.getTrackId(), elementId: insert.getElementId() },
+		]);
+	});
+
+	test("a mixed batch ripples once, in CommandManager, not per child", () => {
+		manager.isRippleEnabled = true;
+		state.tracks.main.elements = [
+			video("a", 0, 1000),
+			video("b", 1000, 1000),
+			video("c", 2000, 1000),
+		] as never;
+		const current = snapshot();
+		const batch = new BatchCommand([
+			// Not ported (handlesRipple false): a no-op snapshot restore.
+			new commands.TracksSnapshotCommand(current, current),
+			new commands.DeleteElementsCommand({
+				elements: [{ trackId: "main", elementId: "a" }],
+			}),
+		]);
+		expect(batch.handlesRipple).toBe(false);
+		manager.execute({ command: batch });
+		expect(state.tracks.main.elements.map((e) => [e.id, e.startTime])).toEqual([
+			["b", 0],
+			["c", 1000],
+		]);
+		manager.undo();
+		expect(state.tracks).toEqual(current);
+	});
+});
+
+describe("agent move_element", () => {
+	test("reports Rust move failures instead of ok: true", async () => {
+		const { TimelineManager } = await import("@/core/managers/timeline-manager");
+		const { registerEditorCommands } = await import(
+			"@/lib/commands-api/register-editor-commands"
+		);
+		const { executeCommand, clearCommandRegistry } = await import(
+			"@/lib/commands-api/registry"
+		);
+		const timeline = new TimelineManager(editorStub as never);
+		const agentEditor = {
+			...editorStub,
+			timeline: Object.assign(Object.create(timeline), editorStub.timeline),
+		};
+		clearCommandRegistry();
+		registerEditorCommands({ editor: agentEditor as never });
+
+		state.tracks.main.elements = [video("a", 0, 1_000_000)] as never;
+		state.tracks.overlay = [
+			{
+				id: "ov",
+				name: "Video",
+				type: "video",
+				muted: false,
+				hidden: false,
+				elements: [video("b", 0, 1_000_000)],
+			},
+		] as never;
+		const originalError = console.error;
+		console.error = () => {};
+		try {
+			const failed = await executeCommand<{ ok: boolean; error?: { code: string } }>({
+				name: "move_element",
+				args: {
+					sourceTrackId: "ov",
+					targetTrackId: "main",
+					elementId: "b",
+					newStartTimeSeconds: 0.5,
+				},
+			});
+			expect(failed.ok).toBe(false);
+			expect(failed.error?.code).toBe("invalid_result");
+
+			const missing = await executeCommand<{ ok: boolean; error?: { code: string } }>({
+				name: "move_element",
+				args: { sourceTrackId: "main", elementId: "nope", newStartTimeSeconds: 0 },
+			});
+			expect(missing).toMatchObject({ ok: false, error: { code: "element_not_found" } });
+
+			const moved = await executeCommand<{ ok: boolean }>({
+				name: "move_element",
+				args: { sourceTrackId: "ov", elementId: "b", newStartTimeSeconds: 2 },
+			});
+			expect(moved).toEqual({ ok: true });
+		} finally {
+			console.error = originalError;
+			clearCommandRegistry();
+		}
 	});
 });

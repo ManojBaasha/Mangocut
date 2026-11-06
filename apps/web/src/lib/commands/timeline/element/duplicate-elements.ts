@@ -1,17 +1,21 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { SceneTracks, TimelineElement } from "@/lib/timeline";
-import { generateUUID } from "@/utils/id";
+import type { SceneTracks } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import { applyPlacement, resolveTrackPlacement } from "@/lib/timeline/placement";
-import { cloneAnimations } from "@/lib/animation";
+import {
+	keepExistingRefs,
+	runTimelineOp,
+	StableIdPool,
+} from "../run-timeline-op";
 
 interface DuplicateElementsParams {
 	elements: { trackId: string; elementId: string }[];
 }
 
 export class DuplicateElementsCommand extends Command {
+	handlesRipple = true;
 	private duplicatedElements: { trackId: string; elementId: string }[] = [];
 	private savedState: SceneTracks | null = null;
+	private ids: StableIdPool | null = null;
 	private elements: DuplicateElementsParams["elements"];
 
 	constructor({ elements }: DuplicateElementsParams) {
@@ -24,72 +28,25 @@ export class DuplicateElementsCommand extends Command {
 		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.duplicatedElements = [];
 
-		let updatedTracks = this.savedState;
-
-		for (const track of [
-			...this.savedState.overlay,
-			this.savedState.main,
-			...this.savedState.audio,
-		]) {
-			const elementsToDuplicate = this.elements.filter(
-				(elementEntry) => elementEntry.trackId === track.id,
-			);
-
-			if (elementsToDuplicate.length === 0) {
-				continue;
-			}
-
-			const elementIdsToDuplicate = new Set(
-				elementsToDuplicate.map((element) => element.elementId),
-			);
-			const newTrackElements: TimelineElement[] = [];
-
-			for (const element of track.elements) {
-				if (!elementIdsToDuplicate.has(element.id)) {
-					continue;
-				}
-
-				const newId = generateUUID();
-				newTrackElements.push(
-					buildDuplicateElement({
-						element,
-						id: newId,
-						startTime: element.startTime,
-					}),
-				);
-			}
-
-			const placementResult = resolveTrackPlacement({
-				tracks: updatedTracks,
-				trackType: track.type,
-				timeSpans: [],
-				strategy: { type: "alwaysNew", position: "highest" },
-			});
-			if (!placementResult || placementResult.kind !== "newTrack") {
-				continue;
-			}
-
-			const applied = applyPlacement({
-				tracks: updatedTracks,
-				placementResult,
-				elements: newTrackElements,
-			});
-			if (!applied) {
-				continue;
-			}
-
-			updatedTracks = applied.updatedTracks;
-
-			for (const element of newTrackElements) {
-				this.duplicatedElements.push({
-					trackId: applied.targetTrackId,
-					elementId: element.id,
-				});
-			}
+		const elements = keepExistingRefs(this.savedState, this.elements);
+		if (elements.length === 0) {
+			return undefined;
+		}
+		this.ids ??= new StableIdPool({ refs: elements.length });
+		const result = runTimelineOp({
+			tracks: this.savedState,
+			op: { type: "duplicateElements", elements },
+			ripple: editor.command.shouldCommandRipple(),
+			ids: this.ids,
+		});
+		if (!result.ok) {
+			return undefined;
+		}
+		if (result.output.changed) {
+			editor.timeline.updateTracks(result.output.tracks);
 		}
 
-		editor.timeline.updateTracks(updatedTracks);
-
+		this.duplicatedElements = result.output.created;
 		if (this.duplicatedElements.length > 0) {
 			return {
 				select: this.duplicatedElements,
@@ -108,25 +65,4 @@ export class DuplicateElementsCommand extends Command {
 	getDuplicatedElements(): { trackId: string; elementId: string }[] {
 		return this.duplicatedElements;
 	}
-}
-
-function buildDuplicateElement({
-	element,
-	id,
-	startTime,
-}: {
-	element: TimelineElement;
-	id: string;
-	startTime: number;
-}): TimelineElement {
-	return {
-		...element,
-		id,
-		name: `${element.name} (copy)`,
-		startTime,
-		animations: cloneAnimations({
-			animations: element.animations,
-			shouldRegenerateKeyframeIds: true,
-		}),
-	};
 }

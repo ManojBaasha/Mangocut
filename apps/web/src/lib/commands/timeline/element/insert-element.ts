@@ -3,22 +3,19 @@ import { EditorCore } from "@/core";
 import type {
 	CreateTimelineElement,
 	SceneTracks,
-	TimelineTrack,
-	TimelineElement,
 	TrackType,
 } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { requiresMediaId } from "@/lib/timeline/element-utils";
 import type { MediaAsset } from "@/lib/media/types";
-import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import { floatToFrameRate } from "@/lib/fps/utils";
 import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
 import {
-	applyPlacement,
-	canElementGoOnTrack,
-	resolveTrackPlacement,
-	validateElementTrackCompatibility,
-} from "@/lib/timeline/placement";
+	isNoOpError,
+	type JsonValue,
+	runTimelineOp,
+	StableIdPool,
+} from "../run-timeline-op";
 
 type InsertElementPlacement =
 	| { mode: "explicit"; trackId: string }
@@ -30,13 +27,16 @@ export interface InsertElementParams {
 }
 
 export class InsertElementCommand extends Command {
+	handlesRipple = true;
 	private elementId: string;
+	private ids: StableIdPool;
 	private savedState: SceneTracks | null = null;
 	private targetTrackId: string | null = null;
 
 	constructor({ element, placement }: InsertElementParams) {
 		super();
 		this.elementId = generateUUID();
+		this.ids = new StableIdPool({ first: this.elementId });
 		this.element = element;
 		this.placement = placement;
 	}
@@ -64,19 +64,37 @@ export class InsertElementCommand extends Command {
 			);
 		const isFirstElement = totalElementsInTimeline === 0;
 
-		const newElement = this.buildElement({ element: this.element });
-		const updateResult = this.applyPlacementResult({
+		// Placement, defaults and validation run in Rust; the element id is
+		// fixed up front so getElementId() works before execute.
+		const result = runTimelineOp({
 			tracks: this.savedState,
-			element: newElement,
+			op: {
+				type: "insertElement",
+				element: this.element as unknown as JsonValue,
+				placement: this.placement,
+			},
+			ripple: editor.command.shouldCommandRipple(),
+			ids: this.ids,
 		});
-
-		if (!updateResult) {
+		if (!result.ok) {
+			if (isNoOpError(result.error)) {
+				console.error(result.error.message);
+			}
+			return;
+		}
+		if (!result.output.changed) {
+			console.error(result.output.summary);
 			return;
 		}
 
-		const { updatedTracks, targetTrackId } = updateResult;
+		const placed = result.output.created[0];
+		if (!placed) {
+			return;
+		}
+		const targetTrackId = placed.trackId;
 		this.targetTrackId = targetTrackId;
 
+		const newElement = this.element;
 		const isVisualMedia =
 			newElement.type === "video" || newElement.type === "image";
 
@@ -102,15 +120,15 @@ export class InsertElementCommand extends Command {
 				});
 			}
 
-		if (asset?.type === "video" && asset?.fps) {
-			editor.project.updateSettings({
-				settings: { fps: floatToFrameRate(asset.fps) },
-				pushHistory: false,
-			});
-		}
+			if (asset?.type === "video" && asset?.fps) {
+				editor.project.updateSettings({
+					settings: { fps: floatToFrameRate(asset.fps) },
+					pushHistory: false,
+				});
+			}
 		}
 
-		editor.timeline.updateTracks(updatedTracks);
+		editor.timeline.updateTracks(result.output.tracks);
 
 		return {
 			select: [{ trackId: targetTrackId, elementId: this.elementId }],
@@ -130,21 +148,6 @@ export class InsertElementCommand extends Command {
 
 	getTrackId(): string | null {
 		return this.targetTrackId;
-	}
-
-	private buildElement({
-		element,
-	}: {
-		element: CreateTimelineElement;
-	}): TimelineElement {
-		return {
-			...element,
-			id: this.elementId,
-			startTime: element.startTime,
-			trimStart: element.trimStart ?? 0,
-			trimEnd: element.trimEnd ?? 0,
-			duration: element.duration ?? DEFAULT_NEW_ELEMENT_DURATION,
-		} as TimelineElement;
 	}
 
 	private validateElementBasics({
@@ -190,94 +193,5 @@ export class InsertElementCommand extends Command {
 		}
 
 		return true;
-	}
-
-	private applyPlacementResult({
-		tracks,
-		element,
-	}: {
-		tracks: SceneTracks;
-		element: TimelineElement;
-	}): { updatedTracks: SceneTracks; targetTrackId: string } | null {
-		const placement = this.placement;
-
-		if (
-			placement.mode === "auto" &&
-			placement.trackType &&
-			!canElementGoOnTrack({
-				elementType: element.type,
-				trackType: placement.trackType,
-			})
-		) {
-			console.error(
-				`${element.type} elements cannot be placed on ${placement.trackType} tracks`,
-			);
-			return null;
-		}
-
-		const placementResult = resolveTrackPlacement({
-			tracks,
-			...(placement.mode === "auto" && placement.trackType
-				? { trackType: placement.trackType }
-				: { elementType: element.type }),
-			timeSpans: [
-				{
-					startTime: element.startTime,
-					duration: element.duration,
-				},
-			],
-			strategy:
-				placement.mode === "explicit"
-					? { type: "explicit", trackId: placement.trackId }
-					: { type: "firstAvailable" },
-		});
-		if (!placementResult) {
-			if (placement.mode === "explicit") {
-				const targetTrack =
-					tracks.main.id === placement.trackId
-						? tracks.main
-						: tracks.overlay.find((track) => track.id === placement.trackId) ??
-							tracks.audio.find((track) => track.id === placement.trackId);
-				if (!targetTrack) {
-					console.error("Track not found:", placement.trackId);
-					return null;
-				}
-
-				const validation = validateElementTrackCompatibility({
-					element,
-					track: targetTrack,
-				});
-				console.error(validation.errorMessage);
-			}
-
-			return null;
-		}
-
-		const elementToPlace =
-			placementResult.kind === "existingTrack"
-				? {
-						...element,
-						startTime:
-							placementResult.adjustedStartTime ?? element.startTime,
-					}
-				: element;
-
-		const appliedPlacement = applyPlacement({
-			tracks,
-			placementResult,
-			elements: [elementToPlace],
-			newTrackInsertIndexOverride:
-				placement.mode === "auto" && typeof placement.insertIndex === "number"
-					? placement.insertIndex
-					: undefined,
-		});
-		if (!appliedPlacement) {
-			return null;
-		}
-
-		return {
-			updatedTracks: appliedPlacement.updatedTracks,
-			targetTrackId: appliedPlacement.targetTrackId,
-		};
 	}
 }

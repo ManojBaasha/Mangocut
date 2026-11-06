@@ -2,11 +2,12 @@ import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { SceneTracks, TrackType } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
-import { idsStartingWith, runTimelineOp } from "../run-timeline-op";
+import { runTimelineOp, StableIdPool } from "../run-timeline-op";
 
 export class AddTrackCommand extends Command {
 	handlesRipple = true;
 	private trackId: string;
+	private ids: StableIdPool;
 	private savedState: SceneTracks | null = null;
 
 	constructor(
@@ -16,6 +17,7 @@ export class AddTrackCommand extends Command {
 		super();
 		// Known before execute: callers batch an insert onto this track.
 		this.trackId = generateUUID();
+		this.ids = new StableIdPool({ first: this.trackId });
 	}
 
 	execute(): CommandResult | undefined {
@@ -26,7 +28,7 @@ export class AddTrackCommand extends Command {
 			tracks: this.savedState,
 			op: { type: "addTrack", trackType: this.type, index: this.index },
 			ripple: editor.command.shouldCommandRipple(),
-			newIds: idsStartingWith(this.trackId),
+			ids: this.ids,
 		});
 		if (result.ok && result.output.changed) {
 			editor.timeline.updateTracks(result.output.tracks);

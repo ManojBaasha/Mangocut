@@ -1,27 +1,10 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { SceneTracks } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import type { TimelineTrack } from "@/lib/timeline";
-
-function removeTrackElements<TTrack extends TimelineTrack>({
-	track,
-	elements,
-}: {
-	track: TTrack;
-	elements: { trackId: string; elementId: string }[];
-}): TTrack {
-	const nextElements = track.elements.filter(
-		(element) =>
-			!elements.some(
-				(target) =>
-					target.trackId === track.id && target.elementId === element.id,
-			),
-	);
-
-	return { ...track, elements: nextElements } as TTrack;
-}
+import { keepExistingRefs, runTimelineOp } from "../run-timeline-op";
 
 export class DeleteElementsCommand extends Command {
+	handlesRipple = true;
 	private savedState: SceneTracks | null = null;
 	private readonly elements: { trackId: string; elementId: string }[];
 
@@ -38,20 +21,21 @@ export class DeleteElementsCommand extends Command {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const updatedTracks: SceneTracks = {
-			overlay: this.savedState.overlay.map((track) =>
-				removeTrackElements({ track, elements: this.elements }),
-			),
-			main: removeTrackElements({
-				track: this.savedState.main,
-				elements: this.elements,
-			}),
-			audio: this.savedState.audio.map((track) =>
-				removeTrackElements({ track, elements: this.elements }),
-			),
-		};
-
-		editor.timeline.updateTracks(updatedTracks);
+		const elements = keepExistingRefs(this.savedState, this.elements);
+		if (elements.length === 0) {
+			return { select: [] };
+		}
+		const result = runTimelineOp({
+			tracks: this.savedState,
+			op: { type: "deleteElements", elements },
+			ripple: editor.command.shouldCommandRipple(),
+		});
+		if (!result.ok) {
+			return undefined;
+		}
+		if (result.output.changed) {
+			editor.timeline.updateTracks(result.output.tracks);
+		}
 
 		return {
 			select: [],
