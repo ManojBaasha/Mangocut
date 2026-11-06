@@ -14,21 +14,18 @@ use crate::model::{
     AudioTrack, OverlayTrack, SceneTracks, Ticks, TimelineElement, VideoTrack, VideoTrackElement,
 };
 
-pub use apply::{append_elements, apply_placement, audio_insert_index, overlay_id};
+pub use apply::{apply_placement, audio_insert_index, overlay_id};
 pub use compatibility::{
     can_element_go_on_track, track_type_for_element_type, validate_element_track_compatibility,
 };
-pub use insert_index::{
-    default_insert_index_for_track, highest_insert_index_for_track,
-    resolve_preferred_new_track_placement,
-};
-pub use main_track::{MAIN_TRACK_NAME, earliest_main_track_element, enforce_main_track_start};
+pub use insert_index::default_insert_index_for_track;
+pub use main_track::{earliest_main_track_element, enforce_main_track_start};
 pub use overlap::can_place_time_spans_on_track;
 pub use resolve::resolve_track_placement;
-pub use track_factory::{build_empty_overlay_track, build_empty_track, default_track_name};
+pub use track_factory::{build_empty_overlay_track, build_empty_track};
 
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object))]
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum TrackType {
@@ -40,7 +37,7 @@ pub enum TrackType {
 }
 
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object))]
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ElementType {
@@ -81,7 +78,7 @@ pub enum PlacementSubject {
 }
 
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object))]
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Direction {
@@ -96,6 +93,8 @@ pub enum VerticalDragDirection {
     Down,
 }
 
+// Ported with the TS placement model; later phases construct every variant.
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlacementStrategy {
     Explicit {
@@ -116,6 +115,7 @@ pub enum PlacementStrategy {
     },
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NewTrackPosition {
     Highest,

@@ -22,6 +22,7 @@ pub fn source_time_at_clip_time(clip_time: Ticks, retime: Option<&RetimeConfig>)
     Ticks(clip_time.0 * safe_rate(retime))
 }
 
+#[allow(dead_code)]
 pub fn clip_time_at_source_time(source_time: Ticks, retime: Option<&RetimeConfig>) -> Ticks {
     Ticks(source_time.0 / safe_rate(retime))
 }

@@ -1,5 +1,6 @@
 use crate::model::{SceneTracks, Ticks, VideoTrack, VideoTrackElement};
 
+#[allow(dead_code)]
 pub const MAIN_TRACK_NAME: &str = "Main Track";
 
 fn start_time(element: &VideoTrackElement) -> Ticks {

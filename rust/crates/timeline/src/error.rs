@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Error returned by `apply_op`. `code` is stable and machine readable;
 /// `hint` tells the caller (often the AI agent) how to recover.
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineError {
