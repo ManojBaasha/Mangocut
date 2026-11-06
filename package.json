@@ -23,7 +23,8 @@
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",
     "lint:web:fix": "biome lint apps/web/src --write --unsafe --max-diagnostics=1000",
     "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
-    "test": "bun test"
+    "test": "bun test",
+    "test:parity": "bun run build:wasm:node && bun test ./apps/web/scripts/timeline-parity/generate.parity.ts ./apps/web/scripts/timeline-parity/harness.parity.ts"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",

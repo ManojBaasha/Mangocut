@@ -84,3 +84,6 @@ jobs:
         working-directory: apps/web
         run: echo "No tests implemented yet"
         continue-on-error: true
+
+      - name: Timeline parity tests
+        run: bun run test:parity

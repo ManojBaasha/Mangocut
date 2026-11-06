@@ -1,4 +1,9 @@
 /**
+ * WARNING: this module installs process-global bun mocks (`@/core`,
+ * `@/utils/id`) and a `mangocut-wasm` plugin. It must run in its own bun
+ * process (`bun run test:parity`); the files are named `*.parity.ts` so the
+ * default `bun test` does not pick them up.
+ *
  * Parity harness: runs today's TypeScript timeline commands on an input scene
  * and records the result, so the Rust `apply_op` can be checked against it.
  *
@@ -6,6 +11,7 @@
  * EditorCore is a minimal stub holding the current tracks.
  */
 import { mock } from "bun:test";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { SceneTracks } from "../../src/lib/timeline/types";
@@ -15,6 +21,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 // The browser wasm package cannot initialise under bun; route app imports of
 // `mangocut-wasm` to the node build of the same crate (run `build:wasm:node`).
 const nodeWasmPath = resolve(here, "../../../../rust/wasm/pkg-node/mangocut_wasm.js");
+if (!existsSync(nodeWasmPath)) {
+	throw new Error(
+		`parity harness: ${nodeWasmPath} is missing; run \`bun run build:wasm:node\` first`,
+	);
+}
 Bun.plugin({
 	name: "mangocut-wasm-node",
 	setup(build) {
