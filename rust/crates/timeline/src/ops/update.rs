@@ -107,9 +107,10 @@ pub(crate) fn apply_element_update(
 ) -> Result<Map<String, Value>, TimelineError> {
     let mut element = original.clone();
     for (key, value) in patch {
-        // `retime: undefined` drops the key once serialized.
-        if key == "retime" && value.is_null() {
-            element.shift_remove("retime");
+        // A TS patch key set to `undefined` drops the field (spread, then
+        // JSON); the wasm adapter sends it as `null`, so `null` removes it.
+        if value.is_null() {
+            element.shift_remove(key);
         } else {
             element.insert(key.clone(), value.clone());
         }
@@ -295,6 +296,29 @@ mod tests {
         assert_eq!(run_err("main", "nope").code, "element_not_found");
         assert_eq!(run_err("nope", "el-1").code, "track_not_found");
         assert!(run(json!({"opacity": 0}), "main", "el-1").changed);
+    }
+
+    #[test]
+    fn null_patch_value_removes_the_key() {
+        let output = run(json!({"blendMode": null, "retime": {"rate": 2}}), "main", "el-1");
+        let value = serde_json::to_value(&output.tracks).unwrap();
+        let element = &value["main"]["elements"][0];
+        assert!(element.get("blendMode").is_none());
+        assert_eq!(element["retime"]["rate"], 2);
+
+        let cleared = apply_op(ApplyOpOptions {
+            tracks: output.tracks,
+            op: serde_json::from_value(json!({"type": "updateElements", "updates": [
+                {"trackId": "main", "elementId": "el-1", "patch": {"retime": null}}]}))
+            .unwrap(),
+            new_ids: vec![],
+            ripple: false,
+        })
+        .unwrap();
+        let value = serde_json::to_value(&cleared.tracks).unwrap();
+        let element = &value["main"]["elements"][0];
+        assert!(element.get("retime").is_none());
+        assert_eq!(element["duration"], 1000);
     }
 
     #[test]
