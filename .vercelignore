@@ -1,0 +1,17 @@
+# Vercel builds apps/web remotely from a repo-root upload (see README).
+# Upload sources only; every build artifact is recreated on Vercel.
+node_modules
+target
+.next
+.turbo
+.vercel
+.superpowers
+.data
+rust/wasm/pkg
+rust/wasm/pkg-node
+apps/electron
+evals
+observability
+docs
+**/*.dmg
+**/.env*.local

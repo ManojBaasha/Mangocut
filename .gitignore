@@ -39,3 +39,7 @@ evals/.venv/
 evals/results/
 evals/**/__pycache__/
 observability-report.md
+
+# Vercel CLI link and prebuilt output (local only)
+.vercel
+.superpowers/

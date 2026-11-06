@@ -32,7 +32,8 @@
     "observability:down": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env down",
     "observability:logs": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env logs -f --tail=200",
     "evals:install": "uv sync --project evals",
-    "evals:run": "cd evals && uv run python run_evals.py"
+    "evals:run": "cd evals && uv run python run_evals.py",
+    "deploy:web": "node script/deploy-web.mjs"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",

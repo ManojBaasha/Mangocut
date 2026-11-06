@@ -10,7 +10,7 @@
  * - Prints the UI URL, the admin login and the three LANGFUSE_* values.
  */
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -85,23 +85,28 @@ const webVars = {
 	LANGFUSE_BASE_URL: baseUrl,
 };
 
-const existingWeb = existsSync(webEnvPath)
-	? parseEnv(readFileSync(webEnvPath, "utf8"))
-	: {};
-const missing = Object.entries(webVars).filter(([k]) => !(k in existingWeb));
-if (missing.length > 0) {
-	const prefix =
-		existsSync(webEnvPath) && !readFileSync(webEnvPath, "utf8").endsWith("\n")
-			? "\n"
-			: "";
-	appendFileSync(
-		webEnvPath,
-		`${prefix}\n# Local Langfuse tracing (observability/README.md)\n${missing
+const webText = existsSync(webEnvPath) ? readFileSync(webEnvPath, "utf8") : "";
+const existingWeb = parseEnv(webText);
+// A key counts as set only with a non-empty value: `.env.example` ships the
+// LANGFUSE_* keys blank, and a copied example must still get them filled in.
+const blank = Object.entries(webVars).filter(
+	([k]) => k in existingWeb && !existingWeb[k],
+);
+const absent = Object.entries(webVars).filter(([k]) => !(k in existingWeb));
+if (blank.length > 0 || absent.length > 0) {
+	let next = webText;
+	for (const [k, v] of blank) {
+		next = next.replace(new RegExp(`^(${k})=\\s*$`, "m"), `$1=${v}`);
+	}
+	if (absent.length > 0) {
+		const prefix = next && !next.endsWith("\n") ? "\n" : "";
+		next += `${prefix}\n# Local Langfuse tracing (observability/README.md)\n${absent
 			.map(([k, v]) => `${k}=${v}`)
-			.join("\n")}\n`,
-	);
+			.join("\n")}\n`;
+	}
+	writeFileSync(webEnvPath, next);
 	console.log(
-		`Added ${missing.map(([k]) => k).join(", ")} to ${path.relative(repoRoot, webEnvPath)}`,
+		`Set ${[...blank, ...absent].map(([k]) => k).join(", ")} in ${path.relative(repoRoot, webEnvPath)}`,
 	);
 } else {
 	console.log(

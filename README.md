@@ -71,18 +71,38 @@ cargo test --workspace
 
 ## Deploying `apps/web` on Vercel
 
-The Vercel project's Root Directory is `apps/web`. `apps/web/vercel.json`
-sets the build command to build the Rust wasm package first
-(`bun run build:wasm` from the repo root: `script/ensure-wasm-toolchain.sh`
-installs rustup, the wasm32 target and the pinned wasm-pack when `VERCEL` is
-set, then the package is synced over the `mangocut-wasm` stub) and then runs
-`next build`.
+The `mangocut` Vercel project has no Git connection; deploys are made with
+the Vercel CLI from the **repo root** and **built on Vercel**. Building on a
+Mac and uploading the output does not work: the auth server uses
+`better-sqlite3`, and a macOS build ships a darwin binary that cannot load in
+Vercel's Linux functions.
 
-Required dashboard setting: **Settings → Build and Deployment → Root
-Directory → "Include source files outside of the Root Directory in the Build
-Step"** must be enabled. `apps/web` depends on `file:../../rust/wasm/stub`
-and the build compiles `rust/`, both outside the Root Directory; without it
-the build fails (or ships the stub).
+One-time project settings (Settings → Build and Deployment):
+
+- **Root Directory:** `apps/web`
+- **Include source files outside of the Root Directory in the Build Step:** on
+  (already on). The build compiles `rust/` and installs from the root lockfile.
+
+Or from the repo root with the CLI:
+
+```bash
+vercel api "/v9/projects/prj_xtlU4nVs1OxsbjMvhb4N6YVjgeMd?teamId=team_8cZraAGe7X9XTH7SnsAtXvOj" -X PATCH -F rootDirectory=apps/web
+```
+
+Then:
+
+```bash
+vercel login                      # once
+bun run deploy:web                # preview deployment
+bun run deploy:web -- --prod      # production
+```
+
+`script/deploy-web.mjs` links the repo root to the project, checks those
+settings, and runs `vercel deploy`. `.vercelignore` keeps local build output
+(`target/`, `node_modules/`, `.next/`, wasm packages, the Electron app, evals)
+out of the upload. On Vercel, `apps/web/vercel.json` builds the Rust wasm
+package (`script/ensure-wasm-toolchain.sh` installs rustup and the pinned
+wasm-pack when `VERCEL` is set) and then runs `next build`.
 
 ## License
 
