@@ -64,8 +64,7 @@ The user picked opencode (github.com/anomalyco/opencode) as the reference becaus
 - Agents (`Agent.Info`: `mode`, `system`, `model`, `steps`, `permissions`), tools, skills (`SKILL.md`), slash commands, permissions (`allow | ask | deny`, last-match-wins wildcard rules, `Permission.Unattended` for nobody-present runs).
 - Subagents via the built-in `subagent` tool (child sessions, foreground or background, follow-ups by `sessionID`).
 - Goal loop (`core/src/plugin/goal.ts`): kickoff prompt, reviewer "judge" each time the session would go idle (`done | continue | blocked | paused | wait`), continuation with the judge's `next_step`, `MAX_ROUNDS = 50`, `MAX_STALLS = 3`, evidence-only judging.
-- Per-step file snapshots (`Snapshot` service, git-backed) giving diffs and revert for files in the session's Location.
-- Pluggable worktree driver (`ctx.worktree.transform`) for isolated working copies.
+- Per-step file snapshots (`Snapshot` service), available only when the Location is a git repository. Not relied on here (see §4.4).
 - Event bus and typed client (`@opencode/client`) for UIs.
 
 Mangocut integrates as **one opencode plugin** written against the Promise plugin API (`@opencode/plugin`). Plugin code is async/await, not Effect; tool input schemas may be zod v4 (opencode validates any Standard Schema; `core/src/tool/runtime.ts:76`). `effect` becomes a peer dependency at opencode's version.
@@ -106,7 +105,7 @@ Today projects live in the renderer's IndexedDB/OPFS (`apps/web/src/services/sto
 
 - Add a filesystem storage adapter beside the existing IndexedDB/OPFS adapters, selected when running in the desktop app. File IO goes through Electron main IPC (renderer) and plain `fs` (engine).
 - One-time migration copies existing desktop IndexedDB/OPFS projects to disk.
-- The project directory is the opencode **Location** for that project's sessions, so opencode snapshots record exactly which branch files each step changed.
+- The project directory is the opencode **Location** for that project's sessions. Branch history is kept by Mangocut itself (§4.4), not by opencode snapshots.
 - Single-writer rule: the renderer owns `project.json`; the engine owns `.mangocut/**`. No file has two writers. This removes the need for locking or merge on concurrent writes.
 
 ### 4.4 Branches replace the in-memory shadow timeline
@@ -114,7 +113,7 @@ Today projects live in the renderer's IndexedDB/OPFS (`apps/web/src/services/sto
 The current `ShadowManager` (one in-memory clone of `SceneTracks`) is replaced by on-disk **branches**:
 
 - A branch is a full copy of `project.json` plus metadata, created from the main timeline's current revision.
-- Mangocut registers a **worktree driver** (`ctx.worktree.transform`) whose `create/remove/list` manage branches. Subagents and variations each get their own branch, exactly as opencode gives parallel coding agents their own worktree.
+- **Branch binding is plugin-managed** (builder's call). opencode's `subagent` tool creates child sessions in the parent's Location and does not use the worktree driver, so the Mangocut plugin keeps a `session → branchId` map in plugin storage. A session's edit tools always act on its bound branch. The director binds a new branch to each variation subagent with `branch_create` before spawning it (tool input `branchId`, or a `mc_bind_branch` step the subagent runs first). Every edit appends a revision under `branches/<id>/revisions/` so `branch_diff` and per-step undo work without git. The opencode worktree driver is not used.
 - The AI Preview panel lists branches for the active session (one per variation), shows each, and offers **Accept** (renderer applies the branch's scenes to main as one undoable `TracksSnapshotCommand`-style command and writes `project.json`) or **Reject** (branch marked discarded, files kept until cleanup).
 - Media the agent creates (renders, grades, downloads) lives under `.mangocut/renders/` and is referenced by branch timelines; it only becomes part of the main project's media index on Accept. This fixes today's leak where `apply_grade` and `import_media_paths` persist assets before Accept.
 - If main changes after a branch was created, the branch records its `baseRevision`; Accept applies the branch's scene state wholesale and warns that manual edits made to main since the branch was cut will be overwritten (same semantics as today's divergence guard, made explicit). Three-way merge is out of scope.
@@ -129,8 +128,8 @@ The engine must edit timelines without a browser. Timeline operations currently 
 
 ### 4.6 Models
 
-- Provider: OpenRouter through the Mangocut proxy, as today, so entitlements and the server-held key stay in place.
-- The proxy gains a **streaming, OpenAI-compatible passthrough** endpoint (`/api/ai/openai/v1/chat/completions`, SSE) authenticated with the desktop session/device token. The engine registers it as an opencode provider through `ctx.provider.transform`.
+- Provider (builder's call): the desktop app already runs its own local Next server on `127.0.0.1:3045`, which holds `OPENROUTER_API_KEY` from the bundled or userData `.env` and runs Better Auth locally. That local server gains a **streaming, OpenAI-compatible passthrough** (`/api/ai/openai/v1/chat/completions`, SSE). The engine registers it as an opencode provider through `ctx.provider.transform` and authenticates with a per-launch secret that Electron main passes to both processes. No hosted token system is built.
+- Metering (builder's call): today's per-chat-turn trial counter (`AI_TRIAL_CHAT_TURNS`) would cut a walk-away job off mid-run, which is the anti-goal. Desktop jobs therefore check entitlement **once at job start**; model calls inside a running job, its subagents and its judge are never refused for quota. Per-job trial accounting is deferred.
 - Primary and judge models must accept image input. Default: a strong vision-capable model chosen via `ctx.model.transform`; subagents may use cheaper models per agent definition.
 
 ## 5. The Mangocut plugin
@@ -155,8 +154,8 @@ Each agent's `permissions` ruleset denies opencode's coding tools (`shell`, `edi
 Namespace `mc_` (opencode flattens `<namespace>_<tool>`). Every tool takes zod input, returns structured output plus model content, and follows the reliability contract in §6.1.
 
 - **Project & media:** `project_summary`, `timeline_overview`, `timeline_detail`, `media_list`, `media_probe` (ffprobe), `media_import` (local paths into `.mangocut/renders` or media inbox), `fetch_reference` (YouTube/URL via bundled `yt-dlp`, into `.mangocut/cache/refs`).
-- **Branches:** `branch_create`, `branch_list`, `branch_diff` (structured diff vs main), `branch_label`. (Subagents get one automatically through the worktree driver.)
-- **Timeline edits (on the session's branch):** `place_clip`, `trim`, `split`, `move`, `delete`, `ripple_delete`, `set_speed`, `set_transform` (crop/scale/position), `set_canvas` (aspect ratio/size), `add_text`, `add_effect`, `apply_grade` (as element/scene grade metadata, not a destructive re-encode), `arrange_layout` (grid/PiP presets), `batch_edit` (apply a list of ops atomically).
+- **Branches:** `branch_create`, `branch_list`, `branch_diff` (structured diff vs main), `branch_label`. (Each session edits the branch it is bound to; see §4.4.)
+- **Timeline edits (on the session's branch):** `place_clip`, `trim`, `split`, `move`, `delete`, `ripple_delete`, `set_speed`, `set_transform` (crop/scale/position), `set_canvas` (aspect ratio/size), `add_text`, `add_effect`, `apply_grade` (bakes the grade with ffmpeg into a new media file under `.mangocut/renders/` and swaps it onto the branch element, so the result plays and exports in the editor unchanged; see §5.4), `arrange_layout` (grid/PiP presets), `batch_edit` (apply a list of ops atomically).
 - **Analysis:** `detect_beats` (onsets, tempo, downbeats), `detect_shots` (scene cuts), `reference_rhythm` (cut times and lengths vs beats in a reference), `transcribe` (existing local Whisper), `find_speech_ranges`, `vision_tag` (stored tags, reusing Phase 6 memory), `search_media`.
 - **Seeing:** `render_frame` (time → PNG of the branch composite), `render_contact_sheet` (N frames tiled), `render_clip` (low-res preview MP4 of a range), `compare_grid` (same frame across several branches), `motion_check` (frame-difference/jank metrics for smoothness). Image results are returned as image content so the model sees them directly.
 - **Output:** `export_preview` (full low-res render of a branch for the judge and the user).
@@ -167,6 +166,10 @@ Engine-side rendering uses ffmpeg with a filter graph generated from the branch 
 ### 5.3 Rust (AGENTS.md)
 
 AGENTS.md makes `rust/` the home of non-UI logic. This project keeps the engine plugin and `timeline-core` in TypeScript because opencode is TypeScript and in-process plugins are the integration point. `timeline-core` is deliberately framework-free so it can later be backed by or replaced with a Rust crate exported through the existing `bridge` `#[export]` path. This is a builder's call, flagged for the user.
+
+### 5.4 Grades (builder's call)
+
+The editor's effect system has only blur today; GPU compositing lives in `rust/crates/compositor`, `effects`, `gpu` via `mangocut-wasm`. A non-destructive GPU colour-grade effect is out of scope for this project. Grades are baked by ffmpeg into new media files (as today's `apply_grade` does), referenced by the branch, and promoted into the project's media index on Accept. Accepted grades therefore play and export in the real editor with no Rust change. A GPU grade effect is a later project.
 
 ## 6. Making jobs finish (the anti-goal)
 
@@ -185,7 +188,11 @@ AGENTS.md makes `rust/` the home of non-UI logic. This project keeps the engine 
 - `blocked` is only legitimate for things no tool can do (missing file the user must supply, unreadable media). The director's prompt and the judge's rules both say so.
 - Rounds: opencode default `MAX_ROUNDS = 50`, `MAX_STALLS = 3`. Raised if the acceptance suite shows 50 is too low for the reference jobs.
 - Unattended permissions: jobs run with `Permission.Unattended` rules so nothing ever waits on an `ask`. Allowed: Mangocut tools on the project directory and on folders the user picked when starting the job. Denied: everything else.
-- Restart: opencode pauses a goal armed by a previous process (`goal.boot !== boot()`). Mangocut auto-resumes paused goals on engine start when the pause reason is a restart, so a crash or quit does not leave a job dead.
+- opencode's goal plugin ends every non-`done` outcome as `paused` with a reason: restart, round limit, 3 stalls, unusable judge verdict, judge overflow, judge `blocked`/`paused`/`wait`, or background work idle past 30 minutes. A Mangocut **job supervisor** (builder's call) watches goal state and acts on the reason:
+  - restart, round limit, stall, unusable/overflowing judge, wait timeout → **re-arm** the goal after a compaction and a `critic` pass that writes a fresh strategy into the continuation. Up to 4 re-arms per job (≈250 rounds), then notify as stopped with the critic's report.
+  - judge `blocked` → notify as blocked with the reason (a real missing input). Not re-armed.
+  - user pause/stop → stay paused.
+  - The supervisor maps these to the notifications `done`, `blocked`, `stopped`. Whether this wraps or forks opencode's goal plugin is left to the builder.
 
 ### 6.3 Acceptance suite (definition of done for the project)
 
@@ -197,7 +204,7 @@ Checked-in fixtures (short, license-clean reference track and clips) and scripte
 4. A layout job: change aspect ratio to 9:16, reframe clips, arrange a 2-up layout.
 5. Kill the engine mid-job; restart; job resumes and finishes.
 
-Pass criterion: each job reaches judge verdict `done` with a branch containing the expected structure (e.g. cut points within ±1 frame of detected beats for job 1; ≥3 branches for job 3), in **5 of 5 consecutive runs** per job. Output quality is not graded.
+Pass criterion: each job reaches judge verdict `done` (re-arms by the supervisor allowed, user intervention not) with a branch containing the expected structure (e.g. cut points within ±1 frame of detected beats for job 1; ≥3 branches for job 3), in **5 of 5 consecutive runs** per job. Output quality is not graded.
 
 Plus unit tests for `timeline-core` operations, the filesystem storage adapter, branch Accept/Reject, and every tool's error paths.
 
