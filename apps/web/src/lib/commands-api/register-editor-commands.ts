@@ -15,6 +15,7 @@ import {
 } from "@/lib/timeline/element-utils";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import { buildDefaultMaskInstance } from "@/lib/masks";
+import { recordPreviewDecision } from "@/lib/ai/observability/client";
 
 const emptyArgs = z.object({});
 
@@ -582,6 +583,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: () => {
 			editor.shadow.accept();
+			recordPreviewDecision(true);
 			return { ok: true };
 		},
 	});
@@ -596,6 +598,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: () => {
 			editor.shadow.reject();
+			recordPreviewDecision(false);
 			return { ok: true };
 		},
 	});

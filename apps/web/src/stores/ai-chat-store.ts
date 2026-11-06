@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { createChatSessionId } from "@/lib/ai/observability/client";
 
 export type AiChatRole = "user" | "assistant" | "system" | "tool";
 
@@ -24,6 +25,8 @@ interface AiUiState {
 	isStreaming: boolean;
 	model: string;
 	messages: AiChatMessage[];
+	/** Conversation id; groups agent-turn traces into one Langfuse session. */
+	sessionId: string;
 	error: string | null;
 	setOpen: (open: boolean) => void;
 	toggleOpen: () => void;
@@ -40,6 +43,7 @@ export const useAiChatStore = create<AiUiState>((set) => ({
 	isStreaming: false,
 	model: "openai/gpt-4.1-mini",
 	messages: [],
+	sessionId: createChatSessionId(),
 	error: null,
 	setOpen: (open) => set({ isOpen: open }),
 	toggleOpen: () => set((s) => ({ isOpen: !s.isOpen })),
@@ -64,5 +68,6 @@ export const useAiChatStore = create<AiUiState>((set) => ({
 		set((s) => ({
 			messages: s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)),
 		})),
-	clearMessages: () => set({ messages: [], error: null }),
+	clearMessages: () =>
+		set({ messages: [], error: null, sessionId: createChatSessionId() }),
 }));

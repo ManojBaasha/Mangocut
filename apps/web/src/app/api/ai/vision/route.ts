@@ -1,7 +1,15 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { consumeAiTurn } from "@/lib/ai/entitlements";
+import { traceContextSchema } from "@/lib/ai/observability/shared";
+import {
+	flushTracing,
+	isTracingEnabled,
+	startModelCall,
+	traceUserIdFromKey,
+	type OpenRouterUsage,
+} from "@/lib/ai/observability/server";
 
 const MAX_IMAGES = 6;
 const MAX_DATA_URL_CHARS = 1_500_000;
@@ -36,6 +44,8 @@ const bodySchema = z.object({
 		)
 		.min(1)
 		.max(20),
+	/** Set when the call happens during an agent turn (describe_media). */
+	trace: traceContextSchema.optional(),
 });
 
 function countImages(
@@ -100,6 +110,19 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Model not allowed" }, { status: 400 });
 	}
 
+	const tracing = isTracingEnabled();
+	const modelCall = startModelCall({
+		trace: body.trace,
+		userId: traceUserIdFromKey(limited.key),
+		name: "vision-call",
+		model: body.model,
+		messages: body.messages,
+		modelParameters: { max_tokens: 2048 },
+	});
+	if (tracing && body.trace) {
+		after(() => flushTracing());
+	}
+
 	try {
 		const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
 			method: "POST",
@@ -114,15 +137,24 @@ export async function POST(request: NextRequest) {
 				model: body.model,
 				messages: body.messages,
 				max_tokens: 2048,
+				...(tracing ? { usage: { include: true } } : {}),
 			}),
 		});
 
 		const data = (await res.json()) as {
+			id?: string;
+			model?: string;
+			usage?: OpenRouterUsage;
 			error?: { message?: string };
 			choices?: Array<{ message?: { content?: string | unknown } }>;
 		};
 
 		if (!res.ok) {
+			modelCall.finish({
+				error: data.error?.message || "OpenRouter request failed",
+				statusCode: res.status,
+				responseId: data.id,
+			});
 			return NextResponse.json(
 				{ error: data.error?.message || "OpenRouter request failed" },
 				{ status: res.status },
@@ -146,6 +178,14 @@ export async function POST(request: NextRequest) {
 							.join("\n")
 					: "";
 
+		modelCall.finish({
+			output: text,
+			usage: data.usage,
+			responseId: data.id,
+			responseModel: data.model,
+			statusCode: res.status,
+			error: text.trim() ? undefined : "Empty vision model response",
+		});
 		if (!text.trim()) {
 			return NextResponse.json(
 				{ error: "Empty vision model response" },
@@ -161,6 +201,7 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "OpenRouter request failed";
+		modelCall.finish({ error: message, statusCode: 502 });
 		return NextResponse.json({ error: message }, { status: 502 });
 	}
 }

@@ -1,7 +1,15 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { consumeAiTurn } from "@/lib/ai/entitlements";
+import { traceContextSchema } from "@/lib/ai/observability/shared";
+import {
+	flushTracing,
+	isTracingEnabled,
+	startModelCall,
+	traceUserIdFromKey,
+	type OpenRouterUsage,
+} from "@/lib/ai/observability/server";
 
 const bodySchema = z.object({
 	model: z.string().min(1).max(200).default("openai/gpt-4.1-mini"),
@@ -14,6 +22,8 @@ const bodySchema = z.object({
 		}),
 	),
 	tools: z.array(z.unknown()).optional(),
+	/** Agent-turn correlation for Langfuse; ignored when tracing is off. */
+	trace: traceContextSchema.optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -60,6 +70,19 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Model not allowed" }, { status: 400 });
 	}
 
+	const tracing = isTracingEnabled();
+	const modelCall = startModelCall({
+		trace: body.trace,
+		userId: traceUserIdFromKey(limited.key),
+		model: body.model,
+		messages: body.messages,
+		tools: body.tools,
+		modelParameters: { max_tokens: 4096 },
+	});
+	if (tracing && body.trace) {
+		after(() => flushTracing());
+	}
+
 	try {
 		const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
 			method: "POST",
@@ -76,15 +99,25 @@ export async function POST(request: NextRequest) {
 				tools: body.tools?.length ? body.tools : undefined,
 				tool_choice: body.tools?.length ? "auto" : undefined,
 				max_tokens: 4096,
+				// Asks OpenRouter to report cost in `usage` (for traces).
+				...(tracing ? { usage: { include: true } } : {}),
 			}),
 		});
 
 		const data = (await res.json()) as {
+			id?: string;
+			model?: string;
+			usage?: OpenRouterUsage;
 			error?: { message?: string };
 			choices?: Array<{ message: unknown }>;
 		};
 
 		if (!res.ok) {
+			modelCall.finish({
+				error: data.error?.message || "OpenRouter request failed",
+				statusCode: res.status,
+				responseId: data.id,
+			});
 			return NextResponse.json(
 				{ error: data.error?.message || "OpenRouter request failed" },
 				{ status: res.status },
@@ -92,6 +125,14 @@ export async function POST(request: NextRequest) {
 		}
 
 		const message = data.choices?.[0]?.message;
+		modelCall.finish({
+			output: message,
+			usage: data.usage,
+			responseId: data.id,
+			responseModel: data.model,
+			statusCode: res.status,
+			error: message ? undefined : "Empty model response",
+		});
 		if (!message) {
 			return NextResponse.json(
 				{ error: "Empty model response" },
@@ -110,6 +151,7 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "OpenRouter request failed";
+		modelCall.finish({ error: message, statusCode: 502 });
 		return NextResponse.json({ error: message }, { status: 502 });
 	}
 }

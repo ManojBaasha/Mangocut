@@ -110,6 +110,7 @@ export function AiChatSidebar() {
 				userMessage: text,
 				history,
 				model,
+				sessionId: useAiChatStore.getState().sessionId,
 				onToolCall: (chip) => {
 					const current = useAiChatStore
 						.getState()

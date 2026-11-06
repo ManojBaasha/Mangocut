@@ -2,6 +2,14 @@ import { listAgentTools, executeCommand } from "@/lib/commands-api";
 import { EditorCore } from "@/core";
 import { getDesktopApi, isMangocutDesktop } from "@/lib/ai/desktop";
 import { aiRequestHeaders, getOrCreateDeviceId } from "@/lib/ai/device-id";
+import {
+	clearActiveTurn,
+	notePreviewTrace,
+	setActiveTurnStep,
+	startTurnTrace,
+	type TurnTrace,
+} from "@/lib/ai/observability/client";
+import type { TraceContext, TurnStatus } from "@/lib/ai/observability/shared";
 
 const SYSTEM_PROMPT = `You are Mangocut AI, an assistant inside a video editor.
 You edit via tools. All timeline mutations apply to the AI Preview (shadow) timeline.
@@ -33,22 +41,103 @@ export interface AgentChatTurn {
 	}>;
 }
 
+type ToolChip = {
+	id: string;
+	name: string;
+	status: "running" | "done" | "error";
+	detail?: string;
+};
+
+type AgentTurnResult = { assistantText: string; toolChips: ToolChip[] };
+
+/**
+ * Runs one agent turn. Each turn is one Langfuse trace (see
+ * lib/ai/observability): model calls are traced server-side, tool calls are
+ * reported from here, and the outcome is recorded when the turn ends.
+ */
 export async function runAgentTurn({
 	userMessage,
 	history,
 	model,
+	sessionId,
 	onToolCall,
 }: {
 	userMessage: string;
 	history: AgentChatTurn[];
 	model: string;
+	/** Chat conversation id (Langfuse session). */
+	sessionId: string;
 	onToolCall?: (chip: {
 		id: string;
 		name: string;
 		status: "running" | "done" | "error";
 		detail?: string;
 	}) => void;
-}): Promise<{ assistantText: string; toolChips: Array<{ id: string; name: string; status: "running" | "done" | "error"; detail?: string }> }> {
+}): Promise<AgentTurnResult> {
+	const maxSteps = agentMaxSteps();
+	const turn = startTurnTrace({
+		sessionId,
+		platform: isMangocutDesktop() ? "desktop" : "web",
+		model,
+		maxSteps,
+		userMessage,
+	});
+	let steps = 0;
+	const finish = (
+		result: AgentTurnResult,
+		status: TurnStatus,
+	): AgentTurnResult => {
+		if (turn.toolCalls > 0) notePreviewTrace(turn.traceId);
+		void turn.end({ status, output: result.assistantText, steps });
+		return result;
+	};
+	try {
+		return await runAgentLoop({
+			userMessage,
+			history,
+			model,
+			maxSteps,
+			turn,
+			onStep: (step) => {
+				steps = step + 1;
+				setActiveTurnStep(turn, step);
+			},
+			onToolCall,
+			finish,
+		});
+	} catch (error) {
+		if (turn.toolCalls > 0) notePreviewTrace(turn.traceId);
+		void turn.end({
+			status: "error",
+			output: "",
+			steps,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		throw error;
+	} finally {
+		clearActiveTurn(turn);
+	}
+}
+
+async function runAgentLoop({
+	userMessage,
+	history,
+	model,
+	maxSteps,
+	turn,
+	onStep,
+	onToolCall,
+	finish,
+}: {
+	userMessage: string;
+	history: AgentChatTurn[];
+	model: string;
+	maxSteps: number;
+	turn: TurnTrace;
+	onStep: (step: number) => void;
+	onToolCall?: (chip: ToolChip) => void;
+	finish: (result: AgentTurnResult, status: TurnStatus) => AgentTurnResult;
+}): Promise<AgentTurnResult> {
 	const editor = EditorCore.getInstance();
 	editor.shadow.ensureShadow();
 
@@ -59,18 +148,13 @@ export async function runAgentTurn({
 		{ role: "user", content: userMessage },
 	];
 
-	const toolChips: Array<{
-		id: string;
-		name: string;
-		status: "running" | "done" | "error";
-		detail?: string;
-	}> = [];
+	const toolChips: ToolChip[] = [];
 
 	const desktop = getDesktopApi();
-	const maxSteps = agentMaxSteps();
 	let verifyFailStreak = 0;
 
 	for (let step = 0; step < maxSteps; step++) {
+		onStep(step);
 		if (step > 0 && step % 6 === 0) {
 			messages.push({
 				role: "system",
@@ -83,6 +167,7 @@ export async function runAgentTurn({
 			model,
 			tools,
 			desktop,
+			trace: turn.context(step),
 		});
 
 		const assistant = response.message;
@@ -93,10 +178,10 @@ export async function runAgentTurn({
 		});
 
 		if (!assistant.tool_calls?.length) {
-			return {
-				assistantText: assistant.content ?? "",
-				toolChips,
-			};
+			return finish(
+				{ assistantText: assistant.content ?? "", toolChips },
+				"completed",
+			);
 		}
 
 		for (const call of assistant.tool_calls) {
@@ -109,8 +194,11 @@ export async function runAgentTurn({
 			onToolCall?.(chip);
 
 			let result: unknown;
+			let args: unknown = call.function.arguments;
+			let toolError: string | undefined;
+			const toolStart = Date.now();
 			try {
-				const args = JSON.parse(call.function.arguments || "{}") as unknown;
+				args = JSON.parse(call.function.arguments || "{}") as unknown;
 				result = await executeCommand({
 					name: call.function.name,
 					args,
@@ -135,9 +223,8 @@ export async function runAgentTurn({
 				if (idx >= 0) toolChips[idx] = done;
 				onToolCall?.(done);
 			} catch (error) {
-				result = {
-					error: error instanceof Error ? error.message : String(error),
-				};
+				toolError = error instanceof Error ? error.message : String(error);
+				result = { error: toolError };
 				const failed = {
 					id: call.id,
 					name: call.function.name,
@@ -149,6 +236,17 @@ export async function runAgentTurn({
 				onToolCall?.(failed);
 			}
 
+			turn.recordTool({
+				step,
+				toolCallId: call.id,
+				name: call.function.name,
+				target: "shadow",
+				args,
+				result,
+				error: toolError,
+				startTime: toolStart,
+			});
+
 			messages.push({
 				role: "tool",
 				tool_call_id: call.id,
@@ -157,18 +255,25 @@ export async function runAgentTurn({
 		}
 
 		if (verifyFailStreak >= 2) {
-			return {
-				assistantText:
-					"I hit repeated verify failures on the edit plan. Please review the AI Preview, adjust the request, or Accept/Reject what is there.",
-				toolChips,
-			};
+			return finish(
+				{
+					assistantText:
+						"I hit repeated verify failures on the edit plan. Please review the AI Preview, adjust the request, or Accept/Reject what is there.",
+					toolChips,
+				},
+				"verify_failed",
+			);
 		}
 	}
 
-	return {
-		assistantText: "Stopped after too many tool steps. Try a narrower request.",
-		toolChips,
-	};
+	return finish(
+		{
+			assistantText:
+				"Stopped after too many tool steps. Try a narrower request.",
+			toolChips,
+		},
+		"max_steps",
+	);
 }
 
 async function callChatApi({
@@ -176,11 +281,13 @@ async function callChatApi({
 	model,
 	tools,
 	desktop,
+	trace,
 }: {
 	messages: AgentChatTurn[];
 	model: string;
 	tools: unknown[];
 	desktop: ReturnType<typeof getDesktopApi>;
+	trace: TraceContext;
 }): Promise<{
 	message: {
 		role: string;
@@ -189,10 +296,12 @@ async function callChatApi({
 	};
 }> {
 	if (isMangocutDesktop() && desktop?.ai?.chat) {
+		// Electron main forwards the body (incl. `trace`) to the local Next server.
 		return desktop.ai.chat({
 			messages,
 			model,
 			tools,
+			trace,
 			deviceId: getOrCreateDeviceId(),
 		} as never);
 	}
@@ -201,7 +310,7 @@ async function callChatApi({
 		method: "POST",
 		headers: aiRequestHeaders(),
 		credentials: "include",
-		body: JSON.stringify({ messages, model, tools }),
+		body: JSON.stringify({ messages, model, tools, trace }),
 	});
 	if (!res.ok) {
 		const text = await res.text();

@@ -6,6 +6,7 @@ import {
 } from "./merge";
 import type { CapturedFrame } from "./capture";
 import { aiRequestHeaders } from "@/lib/ai/device-id";
+import { getActiveTraceContext } from "@/lib/ai/observability/client";
 
 const DEFAULT_VISION_MODEL = "google/gemini-2.5-flash";
 
@@ -59,6 +60,8 @@ export async function describeCapturedFrames({
 					content,
 				},
 			],
+			// Parents this vision call to the running agent turn's trace.
+			trace: getActiveTraceContext(),
 		}),
 	});
 

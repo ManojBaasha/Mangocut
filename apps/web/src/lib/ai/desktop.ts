@@ -6,6 +6,7 @@ export interface MangocutDesktopApi {
 			messages: Array<{ role: string; content: string }>;
 			model: string;
 			tools: unknown[];
+			trace?: import("@/lib/ai/observability/shared").TraceContext;
 			deviceId?: string;
 		}) => Promise<{
 			message: {
