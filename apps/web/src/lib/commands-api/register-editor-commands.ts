@@ -5,6 +5,7 @@ import { findProjectMediaAsset } from "@/lib/commands-api/place-media";
 import { invokeAction } from "@/lib/actions";
 import type { TAction } from "@/lib/actions/definitions";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
+import { TimelineOpError } from "@/lib/wasm/timeline";
 import { getElementsAtTime } from "@/lib/timeline";
 import type { TimelineElement } from "@/lib/timeline";
 import {
@@ -330,12 +331,21 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
-				editor.timeline.moveElement({
+				const error = editor.timeline.moveElement({
 					sourceTrackId: args.sourceTrackId,
 					targetTrackId: args.targetTrackId ?? args.sourceTrackId,
 					elementId: args.elementId,
 					newStartTime: args.newStartTimeSeconds * TICKS_PER_SECOND,
 				});
+				if (error) {
+					const code = error instanceof TimelineOpError ? error.code : "move_failed";
+					const hint = error instanceof TimelineOpError ? error.hint : undefined;
+					return {
+						ok: false,
+						reason: error.message,
+						error: { code, message: error.message, hint },
+					};
+				}
 				return { ok: true };
 			}),
 	});
