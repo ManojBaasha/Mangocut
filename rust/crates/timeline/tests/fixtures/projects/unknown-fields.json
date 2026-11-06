@@ -1,0 +1,122 @@
+{
+	"metadata": {
+		"id": "fixture-unknown",
+		"name": "Unknown fields",
+		"duration": 10000000,
+		"createdAt": "2026-01-01T00:00:00.000Z",
+		"updatedAt": "2026-01-02T12:30:00.000Z",
+		"futureMetadataField": "meta"
+	},
+	"scenes": [
+		{
+			"id": "fixture-unknown-scene",
+			"name": "Main scene",
+			"isMain": true,
+			"tracks": {
+				"overlay": [],
+				"main": {
+					"id": "fixture-unknown-main",
+					"name": "Main Track",
+					"type": "video",
+					"elements": [
+						{
+							"id": "el-1",
+							"type": "video",
+							"mediaId": "media-1",
+							"name": "x.mp4",
+							"duration": 1000000,
+							"startTime": 0,
+							"trimStart": 0,
+							"trimEnd": 0,
+							"transform": {
+								"scaleX": 1,
+								"scaleY": 1,
+								"position": {
+									"x": 0,
+									"y": 0
+								},
+								"rotate": 0
+							},
+							"opacity": 1,
+							"futureElementField": {
+								"nested": [
+									1,
+									2,
+									{
+										"three": 3
+									}
+								],
+								"flag": true
+							}
+						}
+					],
+					"muted": false,
+					"hidden": false,
+					"futureTrackField": "track"
+				},
+				"audio": [
+					{
+						"id": "track-audio",
+						"name": "Audio",
+						"type": "audio",
+						"muted": false,
+						"elements": [
+							{
+								"id": "el-2",
+								"type": "audio",
+								"sourceType": "library",
+								"sourceUrl": "https://example.com/a.mp3",
+								"name": "a",
+								"duration": 1000000,
+								"startTime": 0,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"volume": 0.5,
+								"futureAudioField": [
+									1,
+									"two"
+								]
+							}
+						]
+					}
+				]
+			},
+			"bookmarks": [],
+			"createdAt": "2026-01-01T00:00:00.000Z",
+			"updatedAt": "2026-01-02T12:30:00.000Z",
+			"futureSceneField": null
+		}
+	],
+	"currentSceneId": "fixture-unknown-scene",
+	"settings": {
+		"fps": {
+			"numerator": 30,
+			"denominator": 1
+		},
+		"canvasSize": {
+			"width": 1920,
+			"height": 1080
+		},
+		"canvasSizeMode": "preset",
+		"originalCanvasSize": null,
+		"background": {
+			"type": "color",
+			"color": "#000000"
+		},
+		"futureSettingsField": 42
+	},
+	"version": 23,
+	"timelineViewState": {
+		"zoomLevel": 1,
+		"scrollLeft": 0,
+		"playheadTime": 0
+	},
+	"futureField": {
+		"enabled": true,
+		"level": 3,
+		"tags": [
+			"a",
+			"b"
+		]
+	}
+}

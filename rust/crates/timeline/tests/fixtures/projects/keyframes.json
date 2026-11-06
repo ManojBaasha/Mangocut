@@ -1,0 +1,195 @@
+{
+	"metadata": {
+		"id": "fixture-keyframes",
+		"name": "Keyframes",
+		"duration": 10000000,
+		"createdAt": "2026-01-01T00:00:00.000Z",
+		"updatedAt": "2026-01-02T12:30:00.000Z"
+	},
+	"scenes": [
+		{
+			"id": "fixture-keyframes-scene",
+			"name": "Main scene",
+			"isMain": true,
+			"tracks": {
+				"overlay": [],
+				"main": {
+					"id": "fixture-keyframes-main",
+					"name": "Main Track",
+					"type": "video",
+					"elements": [
+						{
+							"type": "video",
+							"mediaId": "media-1",
+							"name": "clip.mp4",
+							"duration": 5000000,
+							"startTime": 0,
+							"trimStart": 0,
+							"trimEnd": 0,
+							"sourceDuration": 5000000,
+							"muted": false,
+							"isSourceAudioEnabled": true,
+							"hidden": false,
+							"transform": {
+								"scaleX": 1,
+								"scaleY": 1,
+								"position": {
+									"x": 0,
+									"y": 0
+								},
+								"rotate": 0
+							},
+							"opacity": 1,
+							"blendMode": "normal",
+							"volume": 0,
+							"id": "el-1",
+							"animations": {
+								"bindings": {
+									"transform.positionX": {
+										"path": "transform.positionX",
+										"kind": "number",
+										"components": [
+											{
+												"key": "value",
+												"channelId": "transform.positionX:value"
+											}
+										]
+									},
+									"opacity": {
+										"path": "opacity",
+										"kind": "number",
+										"components": [
+											{
+												"key": "value",
+												"channelId": "opacity:value"
+											}
+										]
+									},
+									"transform.rotate": {
+										"path": "transform.rotate",
+										"kind": "number",
+										"components": [
+											{
+												"key": "value",
+												"channelId": "transform.rotate:value"
+											}
+										]
+									}
+								},
+								"channels": {
+									"transform.positionX:value": {
+										"kind": "scalar",
+										"keys": [
+											{
+												"id": "kf-1",
+												"time": 0,
+												"value": 0,
+												"segmentToNext": "linear",
+												"tangentMode": "flat"
+											},
+											{
+												"id": "kf-2",
+												"time": 2000000,
+												"value": 120,
+												"segmentToNext": "bezier",
+												"tangentMode": "flat"
+											},
+											{
+												"id": "kf-3",
+												"time": 4000000,
+												"value": -40,
+												"segmentToNext": "step",
+												"tangentMode": "flat"
+											}
+										]
+									},
+									"opacity:value": {
+										"kind": "scalar",
+										"keys": [
+											{
+												"id": "kf-4",
+												"time": 0,
+												"value": 1,
+												"segmentToNext": "linear",
+												"tangentMode": "flat"
+											},
+											{
+												"id": "kf-5",
+												"time": 3000000,
+												"value": 0.25,
+												"segmentToNext": "linear",
+												"tangentMode": "flat"
+											}
+										]
+									},
+									"transform.rotate:value": {
+										"kind": "scalar",
+										"keys": [
+											{
+												"id": "kf-6",
+												"time": 1000000,
+												"value": 15,
+												"segmentToNext": "bezier",
+												"tangentMode": "flat"
+											},
+											{
+												"id": "kf-7",
+												"time": 3000000,
+												"value": 90,
+												"segmentToNext": "linear",
+												"tangentMode": "flat"
+											}
+										]
+									}
+								}
+							},
+							"retime": {
+								"rate": 1.5,
+								"maintainPitch": true
+							}
+						}
+					],
+					"muted": false,
+					"hidden": false
+				},
+				"audio": []
+			},
+			"bookmarks": [
+				{
+					"time": 1000000,
+					"note": "intro",
+					"color": "#ff0000",
+					"duration": 500000
+				},
+				{
+					"time": 3000000
+				}
+			],
+			"createdAt": "2026-01-01T00:00:00.000Z",
+			"updatedAt": "2026-01-02T12:30:00.000Z"
+		}
+	],
+	"currentSceneId": "fixture-keyframes-scene",
+	"settings": {
+		"fps": {
+			"numerator": 30,
+			"denominator": 1
+		},
+		"canvasSize": {
+			"width": 1920,
+			"height": 1080
+		},
+		"canvasSizeMode": "preset",
+		"originalCanvasSize": null,
+		"background": {
+			"type": "color",
+			"color": "#000000"
+		}
+	},
+	"version": 23,
+	"timelineViewState": {
+		"zoomLevel": 1,
+		"scrollLeft": 0,
+		"playheadTime": 0
+	}
+}

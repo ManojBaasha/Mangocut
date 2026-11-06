@@ -1,0 +1,232 @@
+{
+	"metadata": {
+		"id": "fixture-audio-text",
+		"name": "Audio and text",
+		"duration": 10000000,
+		"createdAt": "2026-01-01T00:00:00.000Z",
+		"updatedAt": "2026-01-02T12:30:00.000Z"
+	},
+	"scenes": [
+		{
+			"id": "fixture-audio-text-scene",
+			"name": "Main scene",
+			"isMain": true,
+			"tracks": {
+				"overlay": [
+					{
+						"id": "track-text",
+						"name": "Text",
+						"type": "text",
+						"elements": [
+							{
+								"type": "text",
+								"name": "Text",
+								"content": "Hello",
+								"duration": 600000,
+								"startTime": 0,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"fontSize": 24,
+								"fontFamily": "Arial",
+								"color": "#ffffff",
+								"background": {
+									"enabled": true,
+									"color": "#112233"
+								},
+								"textAlign": "center",
+								"fontWeight": "normal",
+								"fontStyle": "normal",
+								"textDecoration": "none",
+								"letterSpacing": 0,
+								"lineHeight": 1.2,
+								"transform": {
+									"scaleX": 1,
+									"scaleY": 1,
+									"position": {
+										"x": 0,
+										"y": 0
+									},
+									"rotate": 0
+								},
+								"opacity": 1,
+								"blendMode": "normal",
+								"id": "el-1",
+								"animations": {
+									"bindings": {
+										"background.paddingX": {
+											"path": "background.paddingX",
+											"kind": "number",
+											"components": [
+												{
+													"key": "value",
+													"channelId": "background.paddingX:value"
+												}
+											]
+										}
+									},
+									"channels": {
+										"background.paddingX:value": {
+											"kind": "scalar",
+											"keys": [
+												{
+													"id": "kf-t1",
+													"time": 0,
+													"value": 10,
+													"segmentToNext": "linear",
+													"tangentMode": "flat"
+												}
+											]
+										}
+									}
+								}
+							}
+						],
+						"hidden": false
+					},
+					{
+						"id": "track-graphic",
+						"name": "Graphics",
+						"type": "graphic",
+						"elements": [
+							{
+								"type": "sticker",
+								"name": "heart fill",
+								"stickerId": "icons:heart-fill",
+								"intrinsicWidth": 64,
+								"intrinsicHeight": 64,
+								"duration": 600000,
+								"startTime": 1000000,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"transform": {
+									"scaleX": 1,
+									"scaleY": 1,
+									"position": {
+										"x": 0,
+										"y": 0
+									},
+									"rotate": 0
+								},
+								"opacity": 1,
+								"blendMode": "normal",
+								"id": "el-2"
+							},
+							{
+								"type": "graphic",
+								"name": "Rectangle",
+								"definitionId": "rectangle",
+								"params": {
+									"fill": "#ffffff",
+									"stroke": "#000000",
+									"strokeWidth": 0,
+									"strokeAlign": "center",
+									"cornerRadius": 0
+								},
+								"duration": 600000,
+								"startTime": 2000000,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"transform": {
+									"scaleX": 1,
+									"scaleY": 1,
+									"position": {
+										"x": 0,
+										"y": 0
+									},
+									"rotate": 0
+								},
+								"opacity": 1,
+								"blendMode": "normal",
+								"id": "el-3"
+							}
+						],
+						"hidden": true
+					}
+				],
+				"main": {
+					"id": "fixture-audio-text-main",
+					"name": "Main Track",
+					"type": "video",
+					"elements": [],
+					"muted": false,
+					"hidden": false
+				},
+				"audio": [
+					{
+						"id": "track-audio-1",
+						"name": "Audio 1",
+						"type": "audio",
+						"elements": [
+							{
+								"type": "audio",
+								"sourceType": "upload",
+								"mediaId": "media-4",
+								"name": "voice.wav",
+								"duration": 8000000,
+								"startTime": 0,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"sourceDuration": 8000000,
+								"volume": 0,
+								"muted": false,
+								"id": "el-4"
+							}
+						],
+						"muted": false
+					},
+					{
+						"id": "track-audio-2",
+						"name": "Audio 2",
+						"type": "audio",
+						"elements": [
+							{
+								"type": "audio",
+								"sourceType": "library",
+								"sourceUrl": "https://example.com/song.mp3",
+								"name": "Song",
+								"duration": 4000000,
+								"startTime": 8000000,
+								"trimStart": 0,
+								"trimEnd": 0,
+								"sourceDuration": 4000000,
+								"volume": 0,
+								"muted": false,
+								"id": "el-5",
+								"retime": {
+									"rate": 0.75
+								}
+							}
+						],
+						"muted": true
+					}
+				]
+			},
+			"bookmarks": [],
+			"createdAt": "2026-01-01T00:00:00.000Z",
+			"updatedAt": "2026-01-02T12:30:00.000Z"
+		}
+	],
+	"currentSceneId": "fixture-audio-text-scene",
+	"settings": {
+		"fps": {
+			"numerator": 30,
+			"denominator": 1
+		},
+		"canvasSize": {
+			"width": 1920,
+			"height": 1080
+		},
+		"canvasSizeMode": "preset",
+		"originalCanvasSize": null,
+		"background": {
+			"type": "color",
+			"color": "#000000"
+		}
+	},
+	"version": 23,
+	"timelineViewState": {
+		"zoomLevel": 1,
+		"scrollLeft": 0,
+		"playheadTime": 0
+	}
+}
