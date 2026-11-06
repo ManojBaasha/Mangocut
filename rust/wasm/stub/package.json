@@ -1,0 +1,6 @@
+{
+  "name": "mangocut-wasm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Install-time placeholder. `bun run build:wasm` copies the real wasm-pack output (rust/wasm/pkg) over the installed copy."
+}

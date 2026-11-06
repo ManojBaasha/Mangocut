@@ -24,7 +24,7 @@
 		"culori": "^4.0.2",
 		"eventemitter3": "^5.0.1",
 		"lucide-react": "^0.562.0",
-		"mangocut-wasm": "file:../../rust/wasm/pkg",
+		"mangocut-wasm": "file:../../rust/wasm/stub",
 		"mediabunny": "^1.29.1",
 		"motion": "^12.18.1",
 		"next": "16.1.3",

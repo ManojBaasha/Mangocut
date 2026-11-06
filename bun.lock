@@ -38,7 +38,7 @@
         "culori": "^4.0.2",
         "eventemitter3": "^5.0.1",
         "lucide-react": "^0.562.0",
-        "mangocut-wasm": "file:../../rust/wasm/pkg",
+        "mangocut-wasm": "file:../../rust/wasm/stub",
         "mediabunny": "^1.29.1",
         "motion": "^12.18.1",
         "next": "16.1.3",
@@ -1481,7 +1481,7 @@
 
     "@malept/flatpak-bundler/fs-extra": ["fs-extra@9.1.0", "", { "dependencies": { "at-least-node": "^1.0.0", "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-hcg3ZmepS30/7BSFqRvoo3DOMQu7IjqxO5nCDt+zM9XWjb33Wg7ziNT+Qvqbuc3+gWpzO02JubVyk2G4Zvo1OQ=="],
 
-    "@mangocut/web/mangocut-wasm": ["mangocut-wasm@file:rust/wasm/pkg", {}],
+    "@mangocut/web/mangocut-wasm": ["mangocut-wasm@file:rust/wasm/stub", {}],
 
     "@mangocut/web/typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
 

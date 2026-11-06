@@ -16,4 +16,6 @@ pub use gpu::*;
 #[cfg(all(target_arch = "wasm32", feature = "browser"))]
 pub use masks::*;
 pub use time::*;
+// Task 2 adds items to the timeline crate; the glob is unused until then.
+#[allow(unused_imports)]
 pub use timeline::*;
