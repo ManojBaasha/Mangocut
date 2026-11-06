@@ -507,6 +507,90 @@ describe("ported element commands", () => {
 	});
 });
 
+describe("runtime-only fields (AudioBuffer)", () => {
+	// Stands in for AudioBuffer (a class instance with prototype getters,
+	// which serde-wasm-bindgen would read back as `{}`).
+	class FakeAudioBuffer {
+		get duration() {
+			return 10;
+		}
+	}
+
+	function audio(
+		id: string,
+		startTime: number,
+		source: { sourceType: "upload"; mediaId: string } | { sourceType: "library"; sourceUrl: string },
+		buffer?: FakeAudioBuffer,
+	) {
+		return {
+			type: "audio" as const,
+			id,
+			name: id,
+			startTime,
+			duration: 1000,
+			trimStart: 0,
+			trimEnd: 0,
+			sourceDuration: 10_000,
+			volume: 1,
+			...source,
+			...(buffer ? { buffer } : {}),
+		};
+	}
+
+	function audioScene(buffers: { upload: FakeAudioBuffer; library: FakeAudioBuffer }) {
+		state.tracks.audio = [
+			{
+				id: "au",
+				name: "Audio",
+				type: "audio",
+				muted: false,
+				elements: [
+					audio("a", 0, { sourceType: "upload", mediaId: "m-a" }, buffers.upload),
+					audio("c", 2000, { sourceType: "library", sourceUrl: "https://x/c.mp3" }, buffers.library),
+				],
+			},
+		] as never;
+	}
+
+	test("split and track mute keep the same buffer reference on every element", () => {
+		const buffers = { upload: new FakeAudioBuffer(), library: new FakeAudioBuffer() };
+		audioScene(buffers);
+		const split = new commands.SplitElementsCommand({
+			elements: [{ trackId: "au", elementId: "a" }],
+			splitTime: 500,
+		});
+		manager.execute({ command: split });
+		const [right] = split.getRightSideElements();
+		expect(right).toBeDefined();
+		expect((element("au", "a") as { buffer?: unknown }).buffer).toBe(buffers.upload);
+		expect((element("au", right.elementId) as { buffer?: unknown }).buffer).toBe(buffers.upload);
+		expect((element("au", "c") as { buffer?: unknown }).buffer).toBe(buffers.library);
+
+		manager.execute({ command: new commands.ToggleTrackMuteCommand("au") });
+		expect(state.tracks.audio[0].muted).toBe(true);
+		expect((element("au", "a") as { buffer?: unknown }).buffer).toBe(buffers.upload);
+		expect((element("au", right.elementId) as { buffer?: unknown }).buffer).toBe(buffers.upload);
+		expect((element("au", "c") as { buffer?: unknown }).buffer).toBe(buffers.library);
+	});
+
+	test("an inserted element keeps its buffer", () => {
+		const buffer = new FakeAudioBuffer();
+		const { id: _id, ...rest } = audio(
+			"unused",
+			0,
+			{ sourceType: "library", sourceUrl: "https://x/new.mp3" },
+			buffer,
+		);
+		const insert = new commands.InsertElementCommand({
+			element: rest as never,
+			placement: { mode: "auto" },
+		});
+		manager.execute({ command: insert });
+		const inserted = element(insert.getTrackId() ?? "", insert.getElementId()) as { buffer?: unknown };
+		expect(inserted.buffer).toBe(buffer);
+	});
+});
+
 describe("agent move_element", () => {
 	test("reports Rust move failures instead of ok: true", async () => {
 		const { TimelineManager } = await import("@/core/managers/timeline-manager");

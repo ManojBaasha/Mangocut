@@ -77,6 +77,90 @@ export function stripUndefined<T>(value: T): T {
 	return value;
 }
 
+/**
+ * Element fields that exist only at runtime and are not JSON (an audio
+ * element's decoded `buffer: AudioBuffer`). serde-wasm-bindgen reads a class
+ * instance as `{}`, which is truthy, so they must never cross into wasm:
+ * they are detached before the call and re-attached to the output.
+ */
+const RUNTIME_ONLY_KEYS = ["buffer"] as const;
+
+type RuntimeFields = Partial<Record<(typeof RUNTIME_ONLY_KEYS)[number], unknown>>;
+type ElementLike = Record<string, unknown>;
+
+/**
+ * Runtime fields are keyed by audio source, not element id: split and
+ * duplicate create new elements that must share the same decoded buffer (as
+ * the old TS spreads did).
+ */
+function runtimeKey(element: ElementLike): string {
+	if (element.sourceType === "upload" && typeof element.mediaId === "string") {
+		return `upload:${element.mediaId}`;
+	}
+	if (element.sourceType === "library" && typeof element.sourceUrl === "string") {
+		return `library:${element.sourceUrl}`;
+	}
+	return `element:${String(element.id)}`;
+}
+
+function detachElement(element: unknown, store: Map<string, RuntimeFields>): unknown {
+	if (typeof element !== "object" || element === null) return element;
+	const source = element as ElementLike;
+	if (!RUNTIME_ONLY_KEYS.some((key) => key in source)) return element;
+	const rest: ElementLike = { ...source };
+	const fields: RuntimeFields = {};
+	for (const key of RUNTIME_ONLY_KEYS) {
+		if (rest[key] !== undefined) fields[key] = rest[key];
+		delete rest[key];
+	}
+	const storeKey = runtimeKey(source);
+	if (Object.keys(fields).length > 0 && !store.has(storeKey)) {
+		store.set(storeKey, fields);
+	}
+	return rest;
+}
+
+type TrackLike = { elements: unknown[] };
+
+function detachTrack<T>(track: T, store: Map<string, RuntimeFields>): T {
+	const { elements } = track as unknown as TrackLike;
+	const next = elements.map((element) => detachElement(element, store));
+	return next.some((element, index) => element !== elements[index])
+		? ({ ...track, elements: next } as T)
+		: track;
+}
+
+function detachTracks(tracks: SceneTracks, store: Map<string, RuntimeFields>): SceneTracks {
+	return {
+		...tracks,
+		overlay: tracks.overlay.map((track) => detachTrack(track, store)),
+		main: detachTrack(tracks.main, store),
+		audio: tracks.audio.map((track) => detachTrack(track, store)),
+	};
+}
+
+function detachOp(op: TimelineOp, store: Map<string, RuntimeFields>): TimelineOp {
+	switch (op.type) {
+		case "insertElement":
+			return { ...op, element: detachElement(op.element, store) as typeof op.element };
+		case "batch":
+			return { ...op, ops: op.ops.map((inner) => detachOp(inner, store)) };
+		default:
+			return op;
+	}
+}
+
+/** Re-attaches detached runtime fields to every matching output element. */
+function reattachTracks(tracks: SceneTracks, store: Map<string, RuntimeFields>): void {
+	if (store.size === 0) return;
+	for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
+		for (const element of (track as unknown as TrackLike).elements) {
+			const fields = store.get(runtimeKey(element as ElementLike));
+			if (fields) Object.assign(element as ElementLike, fields);
+		}
+	}
+}
+
 /** Elements, tracks and refs an op mentions; sizes the generated id pool. */
 function countReferences(op: TimelineOp): number {
 	switch (op.type) {
@@ -107,6 +191,35 @@ export function createTimelineApi(wasm: TimelineWasm) {
 		}
 	}
 
+	/** Calls wasm with the given ids, or a generated (and once grown) pool. */
+	function callWithIds({
+		tracks,
+		op,
+		newIds,
+		ripple,
+		validate,
+	}: {
+		tracks: SceneTracks;
+		op: TimelineOp;
+		newIds?: string[];
+		ripple: boolean;
+		validate: boolean;
+	}): OpOutput {
+		if (newIds) {
+			return call({ tracks, op, newIds: [...newIds], ripple, validate });
+		}
+		let poolSize = Math.max(MIN_ID_POOL, IDS_PER_REFERENCE * countReferences(op));
+		try {
+			return call({ tracks, op, newIds: generateIds(poolSize), ripple, validate });
+		} catch (error) {
+			if (!(error instanceof TimelineOpError) || error.code !== "missing_ids") {
+				throw error;
+			}
+			poolSize *= 2;
+			return call({ tracks, op, newIds: generateIds(poolSize), ripple, validate });
+		}
+	}
+
 	function applyTimelineOp({
 		tracks,
 		op,
@@ -114,46 +227,22 @@ export function createTimelineApi(wasm: TimelineWasm) {
 		ripple = false,
 		validate = true,
 	}: ApplyTimelineOpOptions): OpOutput {
-		const cleanTracks = stripUndefined(tracks);
-		const cleanOp = stripUndefined(op);
-		if (newIds) {
-			return call({
-				tracks: cleanTracks,
-				op: cleanOp,
-				newIds: [...newIds],
-				ripple,
-				validate,
-			});
-		}
-		let poolSize = Math.max(
-			MIN_ID_POOL,
-			IDS_PER_REFERENCE * countReferences(cleanOp),
-		);
-		try {
-			return call({
-				tracks: cleanTracks,
-				op: cleanOp,
-				newIds: generateIds(poolSize),
-				ripple,
-				validate,
-			});
-		} catch (error) {
-			if (!(error instanceof TimelineOpError) || error.code !== "missing_ids") {
-				throw error;
-			}
-			poolSize *= 2;
-			return call({
-				tracks: cleanTracks,
-				op: cleanOp,
-				newIds: generateIds(poolSize),
-				ripple,
-				validate,
-			});
-		}
+		const runtime = new Map<string, RuntimeFields>();
+		const output = callWithIds({
+			tracks: stripUndefined(detachTracks(tracks, runtime)),
+			op: stripUndefined(detachOp(op, runtime)),
+			newIds,
+			ripple,
+			validate,
+		});
+		reattachTracks(output.tracks, runtime);
+		return output;
 	}
 
 	function validateTimelineTracks(tracks: SceneTracks): TimelineError[] {
-		return wasm.validateTracks({ tracks: stripUndefined(tracks) });
+		return wasm.validateTracks({
+			tracks: stripUndefined(detachTracks(tracks, new Map())),
+		});
 	}
 
 	return { applyTimelineOp, validateTimelineTracks };

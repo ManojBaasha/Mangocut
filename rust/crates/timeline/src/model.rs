@@ -14,6 +14,11 @@
 //!   serialized without a fractional part (like `JSON.stringify`).
 //! - `animations`, `effects`, `masks`, `params` and text `background` are opaque
 //!   `serde_json::Value` until later phases give them structure.
+//! - Runtime-only, non-JSON fields (today: an audio element's decoded
+//!   `buffer: AudioBuffer`) must never cross into this model. A class instance
+//!   would land in `extra` and come back as `{}` (serde-wasm-bindgen reads
+//!   prototype getters as an empty object). Callers strip them before calling
+//!   and re-attach them after (`apps/web/src/lib/wasm/timeline-core.ts`).
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::{Map, Value};
@@ -566,7 +571,9 @@ pub enum AudioSource {
     },
 }
 
-/// `buffer` (decoded audio) is runtime-only and never serialized.
+/// `buffer` (decoded audio, an `AudioBuffer`) is runtime-only: it is never
+/// serialized and must never be passed in (see the module notes), or it
+/// would round-trip through `extra` as `{}`.
 #[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
 #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
