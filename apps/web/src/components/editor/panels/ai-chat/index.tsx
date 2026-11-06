@@ -59,6 +59,8 @@ export function AiChatSidebar() {
 	const [trialExhausted, setTrialExhausted] = useState(false);
 	const [googleConfigured, setGoogleConfigured] = useState(false);
 	const [authenticated, setAuthenticated] = useState(false);
+	// False only when the server runs with AI_REQUIRE_AUTH=false (local testing).
+	const [authRequired, setAuthRequired] = useState(true);
 	const listRef = useRef<HTMLDivElement>(null);
 	const editor = useEditor();
 	const hasShadow = useEditor((e) => e.shadow.hasShadow());
@@ -83,6 +85,7 @@ export function AiChatSidebar() {
 				trialExhausted?: boolean;
 				googleConfigured?: boolean;
 				authenticated?: boolean;
+				authRequired?: boolean;
 			};
 			setRemaining(data.remaining ?? null);
 			setLimit(data.limit ?? null);
@@ -93,6 +96,7 @@ export function AiChatSidebar() {
 			setTrialExhausted(Boolean(data.trialExhausted));
 			setGoogleConfigured(Boolean(data.googleConfigured));
 			setAuthenticated(Boolean(data.authenticated));
+			setAuthRequired(data.authRequired !== false);
 		} catch {
 			// non-fatal
 		}
@@ -100,7 +104,8 @@ export function AiChatSidebar() {
 
 	if (!isOpen) return null;
 
-	const signedIn = Boolean(session.data?.user?.id) || authenticated;
+	const signedIn =
+		Boolean(session.data?.user?.id) || authenticated || !authRequired;
 	const needsCloudBridge =
 		isCloudAiMode() && Boolean(session.data?.user?.id) && !getStoredAiBearer();
 	const canUseAi = signedIn && !trialExhausted && !needsCloudBridge;
@@ -108,7 +113,7 @@ export function AiChatSidebar() {
 	async function onSend() {
 		const text = input.trim();
 		if (!text || isStreaming) return;
-		if (!authenticated) {
+		if (!signedIn) {
 			setError("Sign in with Google to start your free AI trial.");
 			return;
 		}

@@ -37,8 +37,8 @@ export function trialSpendLimitUsd(): number | null {
 	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function requireAuth(): boolean {
-	// AI always requires sign-in unless explicitly disabled for local break-glass.
+/** AI requires sign-in unless AI_REQUIRE_AUTH=false (local testing break-glass). */
+export function requireAuth(): boolean {
 	return process.env.AI_REQUIRE_AUTH !== "false";
 }
 
