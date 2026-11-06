@@ -41,25 +41,22 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          version: latest
-
-      - name: Cache Rust build artifacts
+      - name: Cache Rust build artifacts and wasm-pack
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
+            ~/.cargo/bin/wasm-pack
+            ~/.cargo/bin/wasm-pack.exe
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          # wasm-pack version: keep in sync with script/ensure-wasm-toolchain.sh.
+          key: ${{ runner.os }}-cargo-wasm-pack-0.15.1-${{ hashFiles('Cargo.lock') }}
 
-      - name: Build WASM
-        run: bun run build:wasm:all
-
-      - name: Rust tests
-        run: cargo test --workspace
+      # Installs the pinned wasm-pack (CI is set, so the script provisions).
+      - name: Install wasm-pack
+        shell: bash
+        run: bash script/ensure-wasm-toolchain.sh
 
       - name: Install Bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76
@@ -70,20 +67,26 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-1.2.18-${{ hashFiles('apps/web/bun.lock') }}
+          key: ${{ runner.os }}-bun-1.2.18-${{ hashFiles('bun.lock') }}
 
+      # Root install covers the apps/* workspaces; it installs the
+      # mangocut-wasm stub, which the wasm build below replaces.
       - name: Install dependencies
-        working-directory: apps/web
         run: bun install
+
+      # Builds rust/wasm/pkg (+ pkg-node) and syncs pkg into node_modules.
+      - name: Build WASM
+        run: bun run build:wasm:all
+
+      - name: Rust tests
+        run: cargo test --workspace
 
       - name: Build
         working-directory: apps/web
         run: bun run build
 
-      - name: Run tests
-        working-directory: apps/web
-        run: echo "No tests implemented yet"
-        continue-on-error: true
+      - name: Integration tests
+        run: bun run test:integration
 
       - name: Timeline parity tests
         run: bun run test:parity
