@@ -141,11 +141,18 @@ export function isNoOpError(error: unknown): boolean {
  * Keeps only refs whose element exists on the named track. The old TS
  * commands skipped unknown refs and applied the rest, while Rust rejects the
  * whole op, so multi-element UI edits drop stale refs first.
+ *
+ * Under strict validation (agent paths) refs pass through unchanged, so an
+ * unknown id is reported (`element_not_found` / `track_not_found` via the
+ * command's `getError()`) instead of silently doing nothing.
  */
 export function keepExistingRefs<T extends ElementRef>(
 	tracks: SceneTracks,
 	refs: T[],
 ): T[] {
+	if (isStrictTimelineValidation()) {
+		return refs;
+	}
 	const allTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	return refs.filter(({ trackId, elementId }) =>
 		allTracks.some(

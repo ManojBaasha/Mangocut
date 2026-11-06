@@ -9,6 +9,7 @@ export class AddTrackCommand extends Command {
 	private trackId: string;
 	private ids: StableIdPool;
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 
 	constructor(
 		private type: TrackType,
@@ -23,6 +24,7 @@ export class AddTrackCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 
 		const result = runTimelineOp({
 			tracks: this.savedState,
@@ -30,7 +32,11 @@ export class AddTrackCommand extends Command {
 			ripple: editor.command.shouldCommandRipple(),
 			ids: this.ids,
 		});
-		if (result.ok && result.output.changed) {
+		if (!result.ok) {
+			this.error = result.error;
+			return undefined;
+		}
+		if (result.output.changed) {
 			editor.timeline.updateTracks(result.output.tracks);
 		}
 		return undefined;
@@ -45,5 +51,10 @@ export class AddTrackCommand extends Command {
 
 	getTrackId(): string {
 		return this.trackId;
+	}
+
+	/** Why the last execute changed nothing, or null on success / no-op. */
+	getError(): Error | null {
+		return this.error;
 	}
 }

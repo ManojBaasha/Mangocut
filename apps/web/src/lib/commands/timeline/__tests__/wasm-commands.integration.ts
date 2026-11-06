@@ -591,6 +591,125 @@ describe("runtime-only fields (AudioBuffer)", () => {
 	});
 });
 
+type AgentResult = {
+	ok: boolean;
+	error?: { code: string; message: string; hint?: string };
+};
+
+async function agentCommands() {
+	const { TimelineManager } = await import("@/core/managers/timeline-manager");
+	const { registerEditorCommands } = await import(
+		"@/lib/commands-api/register-editor-commands"
+	);
+	const { executeCommand, clearCommandRegistry } = await import(
+		"@/lib/commands-api/registry"
+	);
+	const timeline = new TimelineManager(editorStub as never);
+	const agentEditor = {
+		...editorStub,
+		timeline: Object.assign(Object.create(timeline), editorStub.timeline),
+	};
+	clearCommandRegistry();
+	registerEditorCommands({ editor: agentEditor as never });
+	return {
+		run: (name: string, args: Record<string, unknown>) =>
+			executeCommand<AgentResult>({ name, args }),
+		clear: clearCommandRegistry,
+	};
+}
+
+/** Runs `body` with console.error silenced (failed edits log). */
+async function quietly(body: () => Promise<void>) {
+	const originalError = console.error;
+	console.error = () => {};
+	try {
+		await body();
+	} finally {
+		console.error = originalError;
+	}
+}
+
+describe("agent edit handlers report engine rejections", () => {
+	const SECOND = 120_000;
+	function clip(id: string, startSeconds: number) {
+		return { ...video(id, startSeconds * SECOND, SECOND), sourceDuration: 10 * SECOND };
+	}
+
+	test("trim into the next clip returns invalid_result and changes nothing", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0), clip("b", 1)] as never;
+		const before = snapshot();
+		await quietly(async () => {
+			const result = await agent.run("trim_element", {
+				elementId: "a",
+				trimStartSeconds: 0,
+				trimEndSeconds: 0,
+				durationSeconds: 1.5,
+			});
+			expect(result.ok).toBe(false);
+			expect(result.error?.code).toBe("invalid_result");
+			expect(typeof result.error?.hint).toBe("string");
+		});
+		expect(state.tracks).toEqual(before);
+		agent.clear();
+	});
+
+	test("a valid trim still returns ok: true and applies", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0), clip("b", 1)] as never;
+		const result = await agent.run("trim_element", {
+			elementId: "a",
+			trimStartSeconds: 0,
+			trimEndSeconds: 9.5,
+			durationSeconds: 0.5,
+		});
+		expect(result).toEqual({ ok: true });
+		expect(element("main", "a")).toMatchObject({ duration: SECOND / 2, trimEnd: 9.5 * SECOND });
+		agent.clear();
+	});
+
+	test("unknown ids are reported, not ok: true", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0)] as never;
+		const before = snapshot();
+		await quietly(async () => {
+			expect(await agent.run("trim_element", {
+				elementId: "nope",
+				trimStartSeconds: 0,
+				trimEndSeconds: 0,
+			})).toMatchObject({ ok: false, error: { code: "element_not_found" } });
+			expect(await agent.run("delete_elements", {
+				elements: [{ trackId: "main", elementId: "nope" }],
+			})).toMatchObject({ ok: false, error: { code: "element_not_found" } });
+			expect(await agent.run("update_text", {
+				trackId: "nope",
+				elementId: "a",
+				opacity: 0.5,
+			})).toMatchObject({ ok: false, error: { code: "track_not_found" } });
+		});
+		expect(state.tracks).toEqual(before);
+		agent.clear();
+	});
+
+	test("successful split, update and delete return ok: true", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0)] as never;
+		expect(await agent.run("split_at", { seconds: 0.5 })).toEqual({ ok: true, splitCount: 1 });
+		expect(state.tracks.main.elements).toHaveLength(2);
+		expect(await agent.run("update_text", {
+			trackId: "main",
+			elementId: "a",
+			opacity: 0.5,
+		})).toEqual({ ok: true });
+		expect(element("main", "a")).toMatchObject({ opacity: 0.5 });
+		expect(await agent.run("delete_elements", {
+			elements: [{ trackId: "main", elementId: "a" }],
+		})).toEqual({ ok: true });
+		expect(state.tracks.main.elements).toHaveLength(1);
+		agent.clear();
+	});
+});
+
 describe("agent move_element", () => {
 	test("reports Rust move failures instead of ok: true", async () => {
 		const { TimelineManager } = await import("@/core/managers/timeline-manager");

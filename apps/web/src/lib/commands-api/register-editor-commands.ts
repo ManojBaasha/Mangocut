@@ -18,6 +18,20 @@ import { buildDefaultMaskInstance } from "@/lib/masks";
 
 const emptyArgs = z.object({});
 
+/**
+ * The agent-facing result for a timeline edit the engine rejected (typed
+ * TimelineOpError code/hint, or `fallbackCode` for other failures).
+ */
+function editFailure(error: Error, fallbackCode: string) {
+	const code = error instanceof TimelineOpError ? error.code : fallbackCode;
+	const hint = error instanceof TimelineOpError ? error.hint : undefined;
+	return {
+		ok: false as const,
+		reason: error.message,
+		error: { code, message: error.message, hint },
+	};
+}
+
 function withTarget(
 	editor: EditorCore,
 	target: "final" | "shadow",
@@ -208,10 +222,11 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 					duration,
 					startTime,
 				});
-				editor.timeline.insertElement({
+				const error = editor.timeline.insertElement({
 					element,
 					placement: { mode: "auto" },
 				});
+				if (error) return editFailure(error, "insert_failed");
 				return {
 					ok: true,
 					mediaId: asset.id,
@@ -260,7 +275,11 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 				if (elements.length === 0) {
 					return { ok: false, reason: "No elements at time" };
 				}
-				editor.timeline.splitElements({ elements, splitTime: time });
+				const { error } = editor.timeline.splitElementsWithResult({
+					elements,
+					splitTime: time,
+				});
+				if (error) return editFailure(error, "split_failed");
 				return { ok: true, splitCount: elements.length };
 			}),
 	});
@@ -279,7 +298,8 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: ({ elements }, ctx) =>
 			withTarget(editor, ctx.target, () => {
-				editor.timeline.deleteElements({ elements });
+				const error = editor.timeline.deleteElements({ elements });
+				if (error) return editFailure(error, "delete_failed");
 				return { ok: true };
 			}),
 	});
@@ -300,7 +320,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
-				editor.timeline.updateElementTrim({
+				const error = editor.timeline.updateElementTrim({
 					elementId: args.elementId,
 					trimStart: args.trimStartSeconds * TICKS_PER_SECOND,
 					trimEnd: args.trimEndSeconds * TICKS_PER_SECOND,
@@ -313,6 +333,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 							? undefined
 							: args.durationSeconds * TICKS_PER_SECOND,
 				});
+				if (error) return editFailure(error, "trim_failed");
 				return { ok: true };
 			}),
 	});
@@ -340,15 +361,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 						newStartTime: args.newStartTimeSeconds * TICKS_PER_SECOND,
 					}),
 				);
-				if (error) {
-					const code = error instanceof TimelineOpError ? error.code : "move_failed";
-					const hint = error instanceof TimelineOpError ? error.hint : undefined;
-					return {
-						ok: false,
-						reason: error.message,
-						error: { code, message: error.message, hint },
-					};
-				}
+				if (error) return editFailure(error, "move_failed");
 				return { ok: true };
 			}),
 	});
@@ -385,10 +398,11 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 					},
 					startTime,
 				});
-				editor.timeline.insertElement({
+				const error = editor.timeline.insertElement({
 					element,
 					placement: { mode: "auto" },
 				});
+				if (error) return editFailure(error, "insert_failed");
 				return { ok: true, content: args.content };
 			}),
 	});
@@ -415,7 +429,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 				if (args.fontSize !== undefined) patch.fontSize = args.fontSize;
 				if (args.color !== undefined) patch.color = args.color;
 				if (args.opacity !== undefined) patch.opacity = args.opacity;
-				editor.timeline.updateElements({
+				const error = editor.timeline.updateElements({
 					updates: [
 						{
 							trackId: args.trackId,
@@ -424,6 +438,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 						},
 					],
 				});
+				if (error) return editFailure(error, "update_failed");
 				return { ok: true };
 			}),
 	});
@@ -514,7 +529,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 						y: args.y ?? element.transform.position.y,
 					},
 				};
-				editor.timeline.updateElements({
+				const error = editor.timeline.updateElements({
 					updates: [
 						{
 							trackId: args.trackId,
@@ -523,6 +538,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 						},
 					],
 				});
+				if (error) return editFailure(error, "update_failed");
 				return { ok: true, transform };
 			}),
 	});
@@ -542,7 +558,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
 				const mask = buildDefaultMaskInstance({ maskType: "rectangle" });
-				editor.timeline.updateElements({
+				const error = editor.timeline.updateElements({
 					updates: [
 						{
 							trackId: args.trackId,
@@ -551,6 +567,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 						},
 					],
 				});
+				if (error) return editFailure(error, "update_failed");
 				return { ok: true, maskId: mask.id };
 			}),
 	});

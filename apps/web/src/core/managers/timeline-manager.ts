@@ -28,6 +28,7 @@ import {
 	resolveAnimationPathValueAtTime,
 } from "@/lib/animation";
 import { lastFrameTime } from "mangocut-wasm";
+import { TimelineOpError } from "@/lib/wasm/timeline";
 import { BatchCommand } from "@/lib/commands";
 import {
 	AddTrackCommand,
@@ -76,9 +77,11 @@ export class TimelineManager {
 		this.editor.command.execute({ command });
 	}
 
-	insertElement({ element, placement }: InsertElementParams): void {
+	/** Returns why nothing was inserted, or null on success. */
+	insertElement({ element, placement }: InsertElementParams): Error | null {
 		const command = new InsertElementCommand({ element, placement });
 		this.editor.command.execute({ command });
+		return command.getError();
 	}
 
 	updateElementTrim({
@@ -95,10 +98,14 @@ export class TimelineManager {
 		startTime?: number;
 		duration?: number;
 		pushHistory?: boolean;
-	}): void {
+	}): Error | null {
 		const trackId = this.findTrackIdForElement({ elementId });
 		if (!trackId) {
-			return;
+			return new TimelineOpError({
+				code: "element_not_found",
+				message: `element ${elementId} not found`,
+				hint: "list the timeline to find valid element ids",
+			});
 		}
 
 		const nextUpdates: Partial<TimelineElement> = {
@@ -112,7 +119,7 @@ export class TimelineManager {
 			nextUpdates.duration = duration;
 		}
 
-		this.updateElements({
+		return this.updateElements({
 			updates: [
 				{
 					trackId,
@@ -192,13 +199,33 @@ export class TimelineManager {
 		splitTime: number;
 		retainSide?: "both" | "left" | "right";
 	}): { trackId: string; elementId: string }[] {
+		return this.splitElementsWithResult({ elements, splitTime, retainSide })
+			.rightSideElements;
+	}
+
+	/** Like `splitElements`, plus why nothing was split (null on success). */
+	splitElementsWithResult({
+		elements,
+		splitTime,
+		retainSide = "both",
+	}: {
+		elements: { trackId: string; elementId: string }[];
+		splitTime: number;
+		retainSide?: "both" | "left" | "right";
+	}): {
+		rightSideElements: { trackId: string; elementId: string }[];
+		error: Error | null;
+	} {
 		const command = new SplitElementsCommand({
 			elements,
 			splitTime,
 			retainSide,
 		});
 		this.editor.command.execute({ command });
-		return command.getRightSideElements();
+		return {
+			rightSideElements: command.getRightSideElements(),
+			error: command.getError(),
+		};
 	}
 
 	getTotalDuration(): number {
@@ -252,9 +279,10 @@ export class TimelineManager {
 		elements,
 	}: {
 		elements: { trackId: string; elementId: string }[];
-	}): void {
+	}): Error | null {
 		const command = new DeleteElementsCommand({ elements });
 		this.editor.command.execute({ command });
+		return command.getError();
 	}
 
 	toggleSourceAudioSeparation({
@@ -281,9 +309,9 @@ export class TimelineManager {
 			patch: Partial<TimelineElement>;
 		}>;
 		pushHistory?: boolean;
-	}): void {
+	}): Error | null {
 		if (updates.length === 0) {
-			return;
+			return null;
 		}
 
 		const command = new UpdateElementsCommand({
@@ -294,6 +322,7 @@ export class TimelineManager {
 		} else {
 			command.execute();
 		}
+		return command.getError();
 	}
 
 	addClipEffect({

@@ -10,6 +10,7 @@ import {
 export class SplitElementsCommand extends Command {
 	handlesRipple = true;
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 	private ids: StableIdPool | null = null;
 	private rightSideElements: { trackId: string; elementId: string }[] = [];
 	private readonly elements: { trackId: string; elementId: string }[];
@@ -38,6 +39,7 @@ export class SplitElementsCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 		this.rightSideElements = [];
 
 		const elements = keepExistingRefs(this.savedState, this.elements);
@@ -57,6 +59,7 @@ export class SplitElementsCommand extends Command {
 			ids: this.ids,
 		});
 		if (!result.ok) {
+			this.error = result.error;
 			return undefined;
 		}
 		if (result.output.changed) {
@@ -77,5 +80,10 @@ export class SplitElementsCommand extends Command {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
 		}
+	}
+
+	/** Why the last execute changed nothing, or null on success / no-op. */
+	getError(): Error | null {
+		return this.error;
 	}
 }

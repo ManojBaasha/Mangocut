@@ -23,6 +23,7 @@ function toWasmPatch(patch: Partial<TimelineElement>): JsonValue {
 export class UpdateElementsCommand extends Command {
 	handlesRipple = true;
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 	private readonly updates: Array<{
 		trackId: string;
 		elementId: string;
@@ -45,6 +46,7 @@ export class UpdateElementsCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 
 		const updates = keepExistingRefs(this.savedState, this.updates);
 		if (updates.length === 0) {
@@ -62,7 +64,11 @@ export class UpdateElementsCommand extends Command {
 			},
 			ripple: editor.command.shouldCommandRipple(),
 		});
-		if (result.ok && result.output.changed) {
+		if (!result.ok) {
+			this.error = result.error;
+			return undefined;
+		}
+		if (result.output.changed) {
 			editor.timeline.updateTracks(result.output.tracks);
 		}
 		return undefined;
@@ -73,5 +79,10 @@ export class UpdateElementsCommand extends Command {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
 		}
+	}
+
+	/** Why the last execute changed nothing, or null on success / no-op. */
+	getError(): Error | null {
+		return this.error;
 	}
 }

@@ -31,6 +31,7 @@ export class InsertElementCommand extends Command {
 	private elementId: string;
 	private ids: StableIdPool;
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 	private targetTrackId: string | null = null;
 
 	constructor({ element, placement }: InsertElementParams) {
@@ -47,8 +48,12 @@ export class InsertElementCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 
-		if (!this.validateElementBasics({ element: this.element })) {
+		const invalid = this.validateElementBasics({ element: this.element });
+		if (invalid) {
+			console.error(invalid);
+			this.error = new Error(invalid);
 			return;
 		}
 
@@ -80,10 +85,12 @@ export class InsertElementCommand extends Command {
 			if (isNoOpError(result.error)) {
 				console.error(result.error.message);
 			}
+			this.error = result.error;
 			return;
 		}
 		if (!result.output.changed) {
 			console.error(result.output.summary);
+			this.error = new Error(result.output.summary);
 			return;
 		}
 
@@ -150,14 +157,18 @@ export class InsertElementCommand extends Command {
 		return this.targetTrackId;
 	}
 
+	/** Why the last execute inserted nothing, or null on success. */
+	getError(): Error | null {
+		return this.error;
+	}
+
 	private validateElementBasics({
 		element,
 	}: {
 		element: CreateTimelineElement;
-	}): boolean {
+	}): string | null {
 		if (requiresMediaId({ element }) && !("mediaId" in element)) {
-			console.error("Element requires mediaId");
-			return false;
+			return "Element requires mediaId";
 		}
 
 		if (
@@ -165,33 +176,28 @@ export class InsertElementCommand extends Command {
 			element.sourceType === "library" &&
 			!element.sourceUrl
 		) {
-			console.error("Library audio element must have sourceUrl");
-			return false;
+			return "Library audio element must have sourceUrl";
 		}
 
 		if (element.type === "sticker" && !element.stickerId) {
-			console.error("Sticker element must have stickerId");
-			return false;
+			return "Sticker element must have stickerId";
 		}
 
 		if (element.type === "graphic") {
 			registerDefaultGraphics();
 			if (!element.definitionId || !graphicsRegistry.has(element.definitionId)) {
-				console.error("Graphic element must have a valid definitionId");
-				return false;
+				return "Graphic element must have a valid definitionId";
 			}
 		}
 
 		if (element.type === "text" && !element.content) {
-			console.error("Text element must have content");
-			return false;
+			return "Text element must have content";
 		}
 
 		if (element.type === "effect" && !element.effectType) {
-			console.error("Effect element must have effectType");
-			return false;
+			return "Effect element must have effectType";
 		}
 
-		return true;
+		return null;
 	}
 }

@@ -6,6 +6,7 @@ import { keepExistingRefs, runTimelineOp } from "../run-timeline-op";
 export class DeleteElementsCommand extends Command {
 	handlesRipple = true;
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 	private readonly elements: { trackId: string; elementId: string }[];
 
 	constructor({
@@ -20,6 +21,7 @@ export class DeleteElementsCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 
 		const elements = keepExistingRefs(this.savedState, this.elements);
 		if (elements.length === 0) {
@@ -31,6 +33,7 @@ export class DeleteElementsCommand extends Command {
 			ripple: editor.command.shouldCommandRipple(),
 		});
 		if (!result.ok) {
+			this.error = result.error;
 			return undefined;
 		}
 		if (result.output.changed) {
@@ -47,5 +50,10 @@ export class DeleteElementsCommand extends Command {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
 		}
+	}
+
+	/** Why the last execute changed nothing, or null on success / no-op. */
+	getError(): Error | null {
+		return this.error;
 	}
 }

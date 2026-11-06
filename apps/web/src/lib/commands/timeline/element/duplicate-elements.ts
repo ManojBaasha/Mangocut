@@ -15,6 +15,7 @@ export class DuplicateElementsCommand extends Command {
 	handlesRipple = true;
 	private duplicatedElements: { trackId: string; elementId: string }[] = [];
 	private savedState: SceneTracks | null = null;
+	private error: Error | null = null;
 	private ids: StableIdPool | null = null;
 	private elements: DuplicateElementsParams["elements"];
 
@@ -26,6 +27,7 @@ export class DuplicateElementsCommand extends Command {
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
+		this.error = null;
 		this.duplicatedElements = [];
 
 		const elements = keepExistingRefs(this.savedState, this.elements);
@@ -40,6 +42,7 @@ export class DuplicateElementsCommand extends Command {
 			ids: this.ids,
 		});
 		if (!result.ok) {
+			this.error = result.error;
 			return undefined;
 		}
 		if (result.output.changed) {
@@ -64,5 +67,10 @@ export class DuplicateElementsCommand extends Command {
 
 	getDuplicatedElements(): { trackId: string; elementId: string }[] {
 		return this.duplicatedElements;
+	}
+
+	/** Why the last execute changed nothing, or null on success / no-op. */
+	getError(): Error | null {
+		return this.error;
 	}
 }
