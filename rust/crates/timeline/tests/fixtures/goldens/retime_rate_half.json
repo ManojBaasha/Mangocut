@@ -1,0 +1,96 @@
+{
+  "name": "retime_rate_half",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  },
+  "op": {
+    "type": "retimeElement",
+    "trackId": "main",
+    "elementId": "el-1",
+    "retime": {
+      "rate": 0.5,
+      "maintainPitch": true
+    }
+  },
+  "newIds": [],
+  "ripple": false,
+  "expected": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 240000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "retime": {
+            "rate": 0.5,
+            "maintainPitch": true
+          }
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "name": "update_opacity_and_volume",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        },
+        {
+          "type": "video",
+          "id": "el-2",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 60000,
+          "startTime": 120000,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 60000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": [
+      {
+        "id": "audio-1",
+        "name": "Audio track",
+        "type": "audio",
+        "elements": [
+          {
+            "type": "audio",
+            "sourceType": "library",
+            "sourceUrl": "https://example.com/a.mp3",
+            "name": "Song",
+            "id": "au-1",
+            "startTime": 10000,
+            "duration": 50000,
+            "trimStart": 500,
+            "trimEnd": 700,
+            "volume": 1
+          }
+        ],
+        "muted": false
+      }
+    ]
+  },
+  "op": {
+    "type": "updateElements",
+    "updates": [
+      {
+        "trackId": "main",
+        "elementId": "el-1",
+        "patch": {
+          "opacity": 0.5,
+          "volume": -6
+        }
+      },
+      {
+        "trackId": "audio-1",
+        "elementId": "au-1",
+        "patch": {
+          "volume": 0.25
+        }
+      },
+      {
+        "trackId": "main",
+        "elementId": "missing",
+        "patch": {
+          "opacity": 0
+        }
+      }
+    ]
+  },
+  "newIds": [],
+  "ripple": false,
+  "expected": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 0.5,
+          "blendMode": "normal",
+          "volume": -6
+        },
+        {
+          "type": "video",
+          "id": "el-2",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 60000,
+          "startTime": 120000,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 60000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": [
+      {
+        "id": "audio-1",
+        "name": "Audio track",
+        "type": "audio",
+        "elements": [
+          {
+            "type": "audio",
+            "sourceType": "library",
+            "sourceUrl": "https://example.com/a.mp3",
+            "name": "Song",
+            "id": "au-1",
+            "startTime": 10000,
+            "duration": 50000,
+            "trimStart": 500,
+            "trimEnd": 700,
+            "volume": 0.25
+          }
+        ],
+        "muted": false
+      }
+    ]
+  }
+}

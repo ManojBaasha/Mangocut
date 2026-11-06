@@ -21,7 +21,7 @@ use crate::placement::{
 /// `5 * TICKS_PER_SECOND` (apps/web/src/lib/timeline/creation.ts).
 const DEFAULT_NEW_ELEMENT_DURATION: f64 = (5 * TICKS_PER_SECOND) as f64;
 
-fn element_type(name: &str) -> Option<ElementType> {
+pub(super) fn element_type(name: &str) -> Option<ElementType> {
     Some(match name {
         "audio" => ElementType::Audio,
         "text" => ElementType::Text,

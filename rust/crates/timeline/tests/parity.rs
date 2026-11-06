@@ -72,3 +72,33 @@ fn insert_matches_ts() {
 fn split_matches_ts() {
     assert_golden("split_");
 }
+
+#[test]
+fn trim_matches_ts() {
+    assert_golden("trim_");
+}
+
+#[test]
+fn retime_matches_ts() {
+    assert_golden("retime_");
+}
+
+#[test]
+fn move_matches_ts() {
+    assert_golden("move_");
+}
+
+#[test]
+fn delete_matches_ts() {
+    assert_golden("delete_");
+}
+
+#[test]
+fn duplicate_matches_ts() {
+    assert_golden("duplicate_");
+}
+
+#[test]
+fn update_matches_ts() {
+    assert_golden("update_");
+}

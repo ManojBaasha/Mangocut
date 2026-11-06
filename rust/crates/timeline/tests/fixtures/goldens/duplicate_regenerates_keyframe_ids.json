@@ -1,0 +1,787 @@
+{
+  "name": "duplicate_regenerates_keyframe_ids",
+  "input": {
+    "overlay": [],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "animations": {
+            "bindings": {
+              "transform.positionX": {
+                "path": "transform.positionX",
+                "kind": "number",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "transform.positionX:value"
+                  }
+                ]
+              },
+              "opacity": {
+                "path": "opacity",
+                "kind": "number",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "opacity:value"
+                  }
+                ]
+              },
+              "color": {
+                "path": "color",
+                "kind": "color",
+                "colorSpace": "srgb-linear",
+                "components": [
+                  {
+                    "key": "r",
+                    "channelId": "color:r"
+                  },
+                  {
+                    "key": "g",
+                    "channelId": "color:g"
+                  },
+                  {
+                    "key": "b",
+                    "channelId": "color:b"
+                  },
+                  {
+                    "key": "a",
+                    "channelId": "color:a"
+                  }
+                ]
+              },
+              "params.mode": {
+                "path": "params.mode",
+                "kind": "discrete",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "params.mode:value"
+                  }
+                ]
+              }
+            },
+            "channels": {
+              "transform.positionX:value": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "px-0",
+                    "time": 0,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-1",
+                    "time": 30000,
+                    "value": 100,
+                    "rightHandle": {
+                      "dt": 20000,
+                      "dv": 80
+                    },
+                    "segmentToNext": "bezier",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-2",
+                    "time": 90000,
+                    "value": 200,
+                    "leftHandle": {
+                      "dt": -10000,
+                      "dv": -30
+                    },
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-3",
+                    "time": 120000,
+                    "value": 50,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "opacity:value": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "op-0",
+                    "time": 10000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "op-1",
+                    "time": 100000,
+                    "value": 0.25,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:r": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:g": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:b": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:a": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "params.mode:value": {
+                "kind": "discrete",
+                "keys": [
+                  {
+                    "id": "m-0",
+                    "time": 0,
+                    "value": "a"
+                  },
+                  {
+                    "id": "m-1",
+                    "time": 45000,
+                    "value": "b"
+                  },
+                  {
+                    "id": "m-2",
+                    "time": 80000,
+                    "value": "c"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  },
+  "op": {
+    "type": "duplicateElements",
+    "elements": [
+      {
+        "trackId": "main",
+        "elementId": "el-1"
+      }
+    ]
+  },
+  "newIds": [
+    "dup-el",
+    "k1",
+    "k2",
+    "k3",
+    "k4",
+    "k5",
+    "k6",
+    "k7",
+    "k8",
+    "k9",
+    "k10",
+    "k11",
+    "dup-track"
+  ],
+  "ripple": false,
+  "expected": {
+    "overlay": [
+      {
+        "id": "dup-track",
+        "name": "Video track",
+        "type": "video",
+        "elements": [
+          {
+            "type": "video",
+            "id": "dup-el",
+            "mediaId": "media-1",
+            "name": "clip.mp4 (copy)",
+            "duration": 120000,
+            "startTime": 0,
+            "trimStart": 0,
+            "trimEnd": 0,
+            "sourceDuration": 120000,
+            "muted": false,
+            "isSourceAudioEnabled": true,
+            "hidden": false,
+            "transform": {
+              "scaleX": 1,
+              "scaleY": 1,
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "rotate": 0
+            },
+            "opacity": 1,
+            "blendMode": "normal",
+            "volume": 0,
+            "animations": {
+              "bindings": {
+                "transform.positionX": {
+                  "path": "transform.positionX",
+                  "kind": "number",
+                  "components": [
+                    {
+                      "key": "value",
+                      "channelId": "transform.positionX:value"
+                    }
+                  ]
+                },
+                "opacity": {
+                  "path": "opacity",
+                  "kind": "number",
+                  "components": [
+                    {
+                      "key": "value",
+                      "channelId": "opacity:value"
+                    }
+                  ]
+                },
+                "color": {
+                  "path": "color",
+                  "kind": "color",
+                  "colorSpace": "srgb-linear",
+                  "components": [
+                    {
+                      "key": "r",
+                      "channelId": "color:r"
+                    },
+                    {
+                      "key": "g",
+                      "channelId": "color:g"
+                    },
+                    {
+                      "key": "b",
+                      "channelId": "color:b"
+                    },
+                    {
+                      "key": "a",
+                      "channelId": "color:a"
+                    }
+                  ]
+                },
+                "params.mode": {
+                  "path": "params.mode",
+                  "kind": "discrete",
+                  "components": [
+                    {
+                      "key": "value",
+                      "channelId": "params.mode:value"
+                    }
+                  ]
+                }
+              },
+              "channels": {
+                "transform.positionX:value": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k1",
+                      "time": 0,
+                      "value": 0,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k2",
+                      "time": 30000,
+                      "value": 100,
+                      "rightHandle": {
+                        "dt": 20000,
+                        "dv": 80
+                      },
+                      "segmentToNext": "bezier",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k3",
+                      "time": 90000,
+                      "value": 200,
+                      "leftHandle": {
+                        "dt": -10000,
+                        "dv": -30
+                      },
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k4",
+                      "time": 120000,
+                      "value": 50,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "opacity:value": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k5",
+                      "time": 10000,
+                      "value": 1,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k6",
+                      "time": 100000,
+                      "value": 0.25,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "color:r": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k7",
+                      "time": 20000,
+                      "value": 1,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k8",
+                      "time": 70000,
+                      "value": 0,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "color:g": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k7",
+                      "time": 20000,
+                      "value": 0,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k8",
+                      "time": 70000,
+                      "value": 0,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "color:b": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k7",
+                      "time": 20000,
+                      "value": 0,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k8",
+                      "time": 70000,
+                      "value": 1,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "color:a": {
+                  "kind": "scalar",
+                  "keys": [
+                    {
+                      "id": "k7",
+                      "time": 20000,
+                      "value": 1,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    },
+                    {
+                      "id": "k8",
+                      "time": 70000,
+                      "value": 1,
+                      "segmentToNext": "linear",
+                      "tangentMode": "flat"
+                    }
+                  ]
+                },
+                "params.mode:value": {
+                  "kind": "discrete",
+                  "keys": [
+                    {
+                      "id": "k9",
+                      "time": 0,
+                      "value": "a"
+                    },
+                    {
+                      "id": "k10",
+                      "time": 45000,
+                      "value": "b"
+                    },
+                    {
+                      "id": "k11",
+                      "time": 80000,
+                      "value": "c"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "hidden": false,
+        "muted": false
+      }
+    ],
+    "main": {
+      "id": "main",
+      "name": "Main Track",
+      "type": "video",
+      "elements": [
+        {
+          "type": "video",
+          "id": "el-1",
+          "mediaId": "media-1",
+          "name": "clip.mp4",
+          "duration": 120000,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0,
+          "sourceDuration": 120000,
+          "muted": false,
+          "isSourceAudioEnabled": true,
+          "hidden": false,
+          "transform": {
+            "scaleX": 1,
+            "scaleY": 1,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotate": 0
+          },
+          "opacity": 1,
+          "blendMode": "normal",
+          "volume": 0,
+          "animations": {
+            "bindings": {
+              "transform.positionX": {
+                "path": "transform.positionX",
+                "kind": "number",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "transform.positionX:value"
+                  }
+                ]
+              },
+              "opacity": {
+                "path": "opacity",
+                "kind": "number",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "opacity:value"
+                  }
+                ]
+              },
+              "color": {
+                "path": "color",
+                "kind": "color",
+                "colorSpace": "srgb-linear",
+                "components": [
+                  {
+                    "key": "r",
+                    "channelId": "color:r"
+                  },
+                  {
+                    "key": "g",
+                    "channelId": "color:g"
+                  },
+                  {
+                    "key": "b",
+                    "channelId": "color:b"
+                  },
+                  {
+                    "key": "a",
+                    "channelId": "color:a"
+                  }
+                ]
+              },
+              "params.mode": {
+                "path": "params.mode",
+                "kind": "discrete",
+                "components": [
+                  {
+                    "key": "value",
+                    "channelId": "params.mode:value"
+                  }
+                ]
+              }
+            },
+            "channels": {
+              "transform.positionX:value": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "px-0",
+                    "time": 0,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-1",
+                    "time": 30000,
+                    "value": 100,
+                    "rightHandle": {
+                      "dt": 20000,
+                      "dv": 80
+                    },
+                    "segmentToNext": "bezier",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-2",
+                    "time": 90000,
+                    "value": 200,
+                    "leftHandle": {
+                      "dt": -10000,
+                      "dv": -30
+                    },
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "px-3",
+                    "time": 120000,
+                    "value": 50,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "opacity:value": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "op-0",
+                    "time": 10000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "op-1",
+                    "time": 100000,
+                    "value": 0.25,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:r": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:g": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:b": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 0,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "color:a": {
+                "kind": "scalar",
+                "keys": [
+                  {
+                    "id": "c-0",
+                    "time": 20000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  },
+                  {
+                    "id": "c-1",
+                    "time": 70000,
+                    "value": 1,
+                    "segmentToNext": "linear",
+                    "tangentMode": "flat"
+                  }
+                ]
+              },
+              "params.mode:value": {
+                "kind": "discrete",
+                "keys": [
+                  {
+                    "id": "m-0",
+                    "time": 0,
+                    "value": "a"
+                  },
+                  {
+                    "id": "m-1",
+                    "time": 45000,
+                    "value": "b"
+                  },
+                  {
+                    "id": "m-2",
+                    "time": 80000,
+                    "value": "c"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "muted": false,
+      "hidden": false
+    },
+    "audio": []
+  }
+}

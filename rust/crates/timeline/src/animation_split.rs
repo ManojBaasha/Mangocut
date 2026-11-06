@@ -30,7 +30,7 @@ pub(crate) fn js_num(value: f64) -> Value {
 }
 
 /// `Math.max` (NaN-propagating).
-fn js_max(a: f64, b: f64) -> f64 {
+pub(crate) fn js_max(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
@@ -64,7 +64,7 @@ fn present<'a>(object: &'a Object, field: &str) -> Option<&'a Value> {
     object.get(field).filter(|value| !value.is_null())
 }
 
-fn is_truthy(value: Option<&Value>) -> bool {
+pub(crate) fn is_truthy(value: Option<&Value>) -> bool {
     match value {
         None | Some(Value::Null) => false,
         Some(Value::Bool(flag)) => *flag,
@@ -74,7 +74,7 @@ fn is_truthy(value: Option<&Value>) -> bool {
     }
 }
 
-fn keys_of(channel: &Object) -> Vec<Object> {
+pub(crate) fn keys_of(channel: &Object) -> Vec<Object> {
     channel
         .get("keys")
         .and_then(Value::as_array)
@@ -172,7 +172,7 @@ fn normalize_scalar_key(mut key: Object) -> Object {
 
 /// `normalizeChannel`: sorts keys; scalar keys also get defaults and clamped
 /// handles (none on the outer edges).
-fn normalize_channel(channel: &Object) -> Object {
+pub(crate) fn normalize_channel(channel: &Object) -> Object {
     let mut next = channel.clone();
     let mut keys = keys_of(channel);
     if kind_of(channel) == Some("scalar") {
@@ -699,7 +699,7 @@ fn split_scalar_channel_at_time(
 
 /// `toAnimation`: drops falsy bindings and keyless channels; `None` when
 /// either map ends up empty.
-fn to_animation(bindings: Object, channels: Object) -> Option<Value> {
+pub(crate) fn to_animation(bindings: Object, channels: Object) -> Option<Value> {
     let bindings: Object = bindings
         .into_iter()
         .filter(|(_, binding)| is_truthy(Some(binding)))
@@ -811,6 +811,110 @@ pub(crate) fn split_animations_at_time(
         to_animation(left_bindings, left_channels),
         to_animation(right_bindings, right_channels),
     ))
+}
+
+/// `clampAnimationsToDuration`: the left half of a split at `duration`
+/// (`None` when there are no animations or `duration <= 0`).
+pub(crate) fn clamp_animations_to_duration(
+    animations: Option<&Value>,
+    duration: f64,
+    ids: &mut IdSource,
+) -> Result<Option<Value>, TimelineError> {
+    if !is_truthy(animations) || duration <= 0.0 {
+        return Ok(None);
+    }
+    Ok(split_animations_at_time(animations, duration, true, ids)?.0)
+}
+
+/// `cloneAnimations`. With `regenerate_keyframe_ids`, each binding takes one
+/// new id per key of its primary (first) component channel, in key order;
+/// every component channel's keys are remapped through that table.
+pub(crate) fn clone_animations(
+    animations: Option<&Value>,
+    regenerate_keyframe_ids: bool,
+    ids: &mut IdSource,
+) -> Result<Option<Value>, TimelineError> {
+    let Some(animations) = animations.filter(|value| is_truthy(Some(value))) else {
+        return Ok(None);
+    };
+    let empty = Object::new();
+    let bindings = animations
+        .get("bindings")
+        .and_then(Value::as_object)
+        .unwrap_or(&empty);
+    let channels = animations
+        .get("channels")
+        .and_then(Value::as_object)
+        .unwrap_or(&empty);
+
+    let mut next_channels = Object::new();
+    for binding in bindings.values() {
+        if !is_truthy(Some(binding)) {
+            continue;
+        }
+        let components = binding
+            .get("components")
+            .and_then(Value::as_array)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        let channel_id_of = |component: &Value| {
+            component
+                .get("channelId")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        };
+
+        let mut key_id_map: Vec<(String, String)> = Vec::new();
+        let primary = components
+            .first()
+            .and_then(channel_id_of)
+            .and_then(|channel_id| channels.get(&channel_id))
+            .and_then(Value::as_object);
+        if let Some(primary) = primary {
+            for key in keys_of(primary) {
+                let new_id = if regenerate_keyframe_ids {
+                    Some(ids.next()?)
+                } else {
+                    None
+                };
+                if let Some(old_id) = key.get("id").and_then(Value::as_str) {
+                    let new_id = new_id.unwrap_or_else(|| old_id.to_string());
+                    match key_id_map.iter_mut().find(|(old, _)| old == old_id) {
+                        Some(entry) => entry.1 = new_id,
+                        None => key_id_map.push((old_id.to_string(), new_id)),
+                    }
+                }
+            }
+        }
+
+        for component in components {
+            let Some(channel_id) = channel_id_of(component) else {
+                continue;
+            };
+            let Some(channel) = channels.get(&channel_id).and_then(Value::as_object) else {
+                continue;
+            };
+            let keys: Vec<Value> = keys_of(channel)
+                .into_iter()
+                .map(|mut key| {
+                    let mapped = key
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .and_then(|id| key_id_map.iter().find(|(old, _)| old == id))
+                        .map(|(_, new)| new.clone());
+                    if let Some(mapped) = mapped {
+                        key.insert("id".into(), Value::String(mapped));
+                    }
+                    Value::Object(key)
+                })
+                .collect();
+            let mut cloned = channel.clone();
+            cloned.insert("keys".into(), Value::Array(keys));
+            next_channels.insert(channel_id, Value::Object(normalize_channel(&cloned)));
+        }
+    }
+
+    Ok(to_animation(bindings.clone(), next_channels))
 }
 
 #[cfg(test)]

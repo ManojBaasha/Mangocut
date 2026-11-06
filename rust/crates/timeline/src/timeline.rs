@@ -6,6 +6,7 @@ mod model;
 mod ops;
 mod placement;
 mod retime;
+pub mod ripple;
 
 pub use error::*;
 pub use model::*;

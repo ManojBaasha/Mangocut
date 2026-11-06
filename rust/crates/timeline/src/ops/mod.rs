@@ -1,8 +1,14 @@
 //! The single entry point for timeline edits.
 
+mod delete;
+mod duplicate;
+pub(crate) mod elements;
 mod insert;
+mod move_element;
+mod retime;
 mod split;
-
+mod trim;
+mod update;
 use bridge::export;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -201,12 +207,16 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
         tracks,
         op,
         new_ids,
-        // Ripple is applied by the element ops (Task 5+); track ops never ripple.
-        ripple: _,
+        ripple,
     } = options;
     let mut ids = IdSource::new(new_ids);
     let mut next = tracks.clone();
     let applied = apply(&mut next, &op, &mut ids)?;
+    // Like `CommandManager.execute`: ripple runs once, after the whole op.
+    if ripple {
+        let adjustments = crate::ripple::compute(&tracks, &next);
+        next = crate::ripple::apply(&next, &adjustments);
+    }
     let changed = next != tracks;
     Ok(OpOutput {
         tracks: next,
@@ -259,14 +269,43 @@ fn apply(
             split_time,
             retain_side,
         } => split::split(tracks, elements, *split_time, *retain_side, ids),
-        TimelineOp::TrimElement { .. } => Err(TimelineError::unsupported_op("trimElement")),
-        TimelineOp::RetimeElement { .. } => Err(TimelineError::unsupported_op("retimeElement")),
-        TimelineOp::MoveElement { .. } => Err(TimelineError::unsupported_op("moveElement")),
-        TimelineOp::DeleteElements { .. } => Err(TimelineError::unsupported_op("deleteElements")),
-        TimelineOp::DuplicateElements { .. } => {
-            Err(TimelineError::unsupported_op("duplicateElements"))
-        }
-        TimelineOp::UpdateElements { .. } => Err(TimelineError::unsupported_op("updateElements")),
+        TimelineOp::TrimElement {
+            element_id,
+            trim_start,
+            trim_end,
+            start_time,
+            duration,
+        } => trim::trim(
+            tracks,
+            element_id,
+            *trim_start,
+            *trim_end,
+            *start_time,
+            *duration,
+            ids,
+        ),
+        TimelineOp::RetimeElement {
+            track_id,
+            element_id,
+            retime,
+        } => retime::retime(tracks, track_id, element_id, retime.as_ref(), ids),
+        TimelineOp::MoveElement {
+            source_track_id,
+            target_track_id,
+            element_id,
+            new_start_time,
+            create_track,
+        } => move_element::move_element(
+            tracks,
+            source_track_id,
+            target_track_id,
+            element_id,
+            *new_start_time,
+            create_track.as_ref(),
+        ),
+        TimelineOp::DeleteElements { elements } => delete::delete(tracks, elements),
+        TimelineOp::DuplicateElements { elements } => duplicate::duplicate(tracks, elements, ids),
+        TimelineOp::UpdateElements { updates } => update::update(tracks, updates, ids),
     }
 }
 

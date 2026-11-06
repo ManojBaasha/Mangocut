@@ -279,6 +279,20 @@ const animatedScene: SceneTracks = scene({
 	]),
 });
 
+const moveScene: SceneTracks = scene({
+	overlay: [
+		{
+			id: "video-2",
+			name: "Overlay",
+			type: "video",
+			elements: [videoElement({ id: "el-b", startTime: 0, duration: 120000 })],
+			muted: false,
+			hidden: false,
+		},
+	] as SceneTracks["overlay"],
+	main: mainTrack([videoElement({ id: "el-1" })]),
+});
+
 const splitEl1 = [{ trackId: "main", elementId: "el-1" }];
 
 export const cases: ParityCase[] = [
@@ -479,5 +493,185 @@ export const cases: ParityCase[] = [
 			"m-right",
 			"right-1",
 		],
+	},
+	// --- Task 7: trim, retime, move, delete, duplicate, update, ripple ---
+	{
+		name: "trim_start_end",
+		input: splitScene,
+		op: { type: "trimElement", elementId: "el-1", trimStart: 10000, trimEnd: 5000 },
+		newIds: [],
+	},
+	{
+		name: "trim_with_start_and_duration",
+		input: splitScene,
+		op: {
+			type: "trimElement",
+			elementId: "el-2",
+			trimStart: 10000,
+			trimEnd: 0,
+			startTime: 130000,
+			duration: 50000,
+		},
+		newIds: [],
+	},
+	{
+		name: "trim_clamps_animations",
+		input: animatedScene,
+		op: { type: "trimElement", elementId: "el-1", trimStart: 0, trimEnd: 60000, duration: 60000 },
+		newIds: ["px-left", "px-right", "op-left", "op-right", "c-left", "c-right", "m-left", "m-right"],
+	},
+	{
+		name: "retime_rate_half",
+		input: scene({ main: mainTrack([videoElement({ id: "el-1" })]) }),
+		op: {
+			type: "retimeElement",
+			trackId: "main",
+			elementId: "el-1",
+			retime: { rate: 0.5, maintainPitch: true },
+		},
+		newIds: [],
+	},
+	{
+		name: "retime_clear",
+		input: retimedScene({ rate: 2, duration: 60000, trimStart: 1000, trimEnd: 2000 }),
+		op: { type: "retimeElement", trackId: "main", elementId: "el-1", retime: null },
+		newIds: [],
+	},
+	{
+		name: "move_same_track",
+		input: splitScene,
+		op: {
+			type: "moveElement",
+			sourceTrackId: "main",
+			targetTrackId: "main",
+			elementId: "el-2",
+			newStartTime: 200000,
+		},
+		newIds: [],
+	},
+	{
+		name: "move_to_other_track",
+		input: moveScene,
+		op: {
+			type: "moveElement",
+			sourceTrackId: "main",
+			targetTrackId: "video-2",
+			elementId: "el-1",
+			newStartTime: 5000,
+		},
+		newIds: [],
+	},
+	{
+		name: "move_create_track",
+		input: moveScene,
+		op: {
+			type: "moveElement",
+			sourceTrackId: "main",
+			targetTrackId: "created-track",
+			elementId: "el-1",
+			newStartTime: 7000,
+			createTrack: { type: "video", index: 0 },
+		},
+		newIds: [],
+	},
+	{
+		name: "move_onto_occupied",
+		input: moveScene,
+		op: {
+			type: "moveElement",
+			sourceTrackId: "main",
+			targetTrackId: "video-2",
+			elementId: "el-1",
+			newStartTime: 150000,
+		},
+		newIds: [],
+	},
+	{
+		name: "delete_one",
+		input: splitScene,
+		op: { type: "deleteElements", elements: [{ trackId: "main", elementId: "el-2" }] },
+		newIds: [],
+	},
+	{
+		name: "delete_many_across_tracks",
+		input: splitScene,
+		op: {
+			type: "deleteElements",
+			elements: [
+				{ trackId: "main", elementId: "el-1" },
+				{ trackId: "audio-1", elementId: "au-1" },
+				{ trackId: "main", elementId: "missing" },
+			],
+		},
+		newIds: [],
+	},
+	{
+		name: "delete_ripple",
+		input: splitScene,
+		op: { type: "deleteElements", elements: [{ trackId: "main", elementId: "el-1" }] },
+		newIds: [],
+		ripple: true,
+	},
+	{
+		name: "duplicate_two",
+		input: splitScene,
+		op: {
+			type: "duplicateElements",
+			elements: [
+				{ trackId: "audio-1", elementId: "au-1" },
+				{ trackId: "main", elementId: "el-1" },
+			],
+		},
+		newIds: ["dup-main", "dup-main-track", "dup-audio", "dup-audio-track"],
+	},
+	{
+		name: "duplicate_regenerates_keyframe_ids",
+		input: animatedScene,
+		op: { type: "duplicateElements", elements: splitEl1 },
+		newIds: [
+			"dup-el",
+			"k1",
+			"k2",
+			"k3",
+			"k4",
+			"k5",
+			"k6",
+			"k7",
+			"k8",
+			"k9",
+			"k10",
+			"k11",
+			"dup-track",
+		],
+	},
+	{
+		name: "update_transform",
+		input: splitScene,
+		op: {
+			type: "updateElements",
+			updates: [
+				{
+					trackId: "main",
+					elementId: "el-1",
+					patch: {
+						transform: { scaleX: 1.5, scaleY: 1.5, position: { x: 10, y: -20 }, rotate: 15 },
+					},
+				},
+			],
+		},
+		newIds: [],
+	},
+	{
+		name: "update_opacity_and_volume",
+		input: splitScene,
+		op: {
+			type: "updateElements",
+			updates: [
+				{ trackId: "main", elementId: "el-1", patch: { opacity: 0.5, volume: -6 } },
+				{ trackId: "audio-1", elementId: "au-1", patch: { volume: 0.25 } },
+				{ trackId: "main", elementId: "missing", patch: { opacity: 0 } },
+			],
+		},
+		newIds: [],
 	},
 ];
