@@ -1,10 +1,17 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
 
-// Local/Electron monorepo builds trace from the repo root; Vercel deploys
-// only apps/web, so pointing outside the upload root doubles /vercel/path0.
+// Trace (and resolve hoisted workspace deps like `next`) from the repo root
+// whenever it is present: local/Electron builds, and Vercel with "Include
+// source files outside of the Root Directory" on (required: apps/web depends
+// on file:../../rust/wasm/stub and the build compiles rust/). Only when the
+// upload holds apps/web alone (repo root absent) fall back to apps/web, as
+// pointing outside the upload root doubles /vercel/path0.
 const repoRoot = path.join(__dirname, "../..");
-const tracingRoot = process.env.VERCEL ? __dirname : repoRoot;
+const tracingRoot = existsSync(path.join(repoRoot, "turbo.json"))
+	? repoRoot
+	: __dirname;
 
 const nextConfig: NextConfig = {
 	compiler: {
