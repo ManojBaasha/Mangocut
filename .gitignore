@@ -32,3 +32,10 @@ apps/electron/resources/next/
 
 # AI desktop watcher trigger/logs (local only)
 script/triggers/
+
+# Local observability / evals
+observability/langfuse/.env
+evals/.venv/
+evals/results/
+evals/**/__pycache__/
+observability-report.md

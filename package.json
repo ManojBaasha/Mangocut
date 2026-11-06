@@ -26,7 +26,13 @@
     "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
     "test": "bun test",
     "test:integration": "bun run build:wasm:node && bun test ./apps/web/src/lib/wasm/__tests__/node-smoke.integration.ts ./apps/web/src/lib/wasm/__tests__/timeline-core.integration.ts && bun test ./apps/web/src/lib/commands/timeline/__tests__/wasm-commands.integration.ts",
-    "test:parity": "bun run build:wasm:node && bun test ./apps/web/scripts/timeline-parity/generate.parity.ts ./apps/web/scripts/timeline-parity/harness.parity.ts"
+    "test:parity": "bun run build:wasm:node && bun test ./apps/web/scripts/timeline-parity/generate.parity.ts ./apps/web/scripts/timeline-parity/harness.parity.ts",
+    "observability:setup": "node script/observability-setup.mjs",
+    "observability:up": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env up -d",
+    "observability:down": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env down",
+    "observability:logs": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env logs -f --tail=200",
+    "evals:install": "uv sync --project evals",
+    "evals:run": "cd evals && uv run python run_evals.py"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",
