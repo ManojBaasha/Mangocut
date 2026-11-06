@@ -4,7 +4,7 @@
  * process (`bun run test:parity`); the files are named `*.parity.ts` so the
  * default `bun test` does not pick them up.
  *
- * Parity harness: runs today's TypeScript timeline commands on an input scene
+ * Parity harness: runs the frozen legacy TypeScript timeline commands on an input scene
  * and records the result, so the Rust `apply_op` can be checked against it.
  *
  * `runTsOp` is deterministic: new ids come from `newIds` (in order) and the
@@ -137,7 +137,8 @@ mock.module("@/utils/id", () => ({
 	},
 }));
 
-const commands = await import("../../src/lib/commands/timeline");
+// Legacy TS commands: goldens stay generated from the original TS logic.
+const commands = await import("./legacy");
 const { computeRippleAdjustments, applyRippleAdjustments } = await import(
 	"../../src/lib/ripple"
 );
