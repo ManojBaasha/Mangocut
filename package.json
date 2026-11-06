@@ -33,7 +33,8 @@
     "observability:logs": "docker compose -f observability/langfuse/docker-compose.yml --env-file observability/langfuse/.env logs -f --tail=200",
     "evals:install": "uv sync --project evals",
     "evals:run": "cd evals && uv run python run_evals.py",
-    "deploy:web": "node script/deploy-web.mjs"
+    "deploy:web": "node script/deploy-web.mjs",
+    "traces": "node script/agent-traces.mjs"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",

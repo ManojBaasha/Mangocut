@@ -15,6 +15,16 @@ Each app is a frontend that calls into Rust. Logic is never duplicated between a
 - `web/` — Next.js
 - `desktop/` — GPUI
 
+## Debugging AI agent runs
+
+Every Mangocut agent turn (model calls, tool calls with args/results/errors, accept/reject, eval scores) is recorded in a local Langfuse when `LANGFUSE_*` keys are set. Inspect it from the terminal, not the web UI:
+
+- `bun run observability:up` — start local Langfuse (first time: `bun run observability:setup`).
+- `bun run traces failures` — recent turns that did not complete, hit a tool/model error, or scored below 0.5.
+- `bun run traces show <traceId>` — step-by-step timeline of one turn (`--full` for untruncated payloads, `--json` for machine-readable output).
+- `bun run traces list --limit 20 [--session ID] [--json]` — recent turns with status, steps and tool counts.
+- `bun run evals:run -- --deterministic-only` — score recorded turns without calling a judge model (drop the flag to also run LLM-judged metrics via OpenRouter).
+
 ## Web
 
 ### React
