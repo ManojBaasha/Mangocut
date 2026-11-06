@@ -1,17 +1,19 @@
 # Vercel builds apps/web remotely from a repo-root upload (see README).
 # Upload sources only; every build artifact is recreated on Vercel.
+# Leading "/" anchors to the repo root, so app folders with the same name
+# (e.g. apps/web/src/lib/ai/observability) are still uploaded.
 node_modules
-target
 .next
 .turbo
 .vercel
-.superpowers
 .data
-rust/wasm/pkg
-rust/wasm/pkg-node
-apps/electron
-evals
-observability
-docs
-**/*.dmg
 **/.env*.local
+**/*.dmg
+/target
+/.superpowers
+/rust/wasm/pkg
+/rust/wasm/pkg-node
+/apps/electron
+/evals
+/observability
+/docs

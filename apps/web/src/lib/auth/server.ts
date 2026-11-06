@@ -2,11 +2,16 @@ import { betterAuth } from "better-auth";
 import { dash } from "@better-auth/infra";
 import Database from "better-sqlite3";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 function resolveDataDir(): string {
 	const configured = process.env.MANGOCUT_DATA_DIR;
 	if (configured) return configured;
+	// Vercel Functions run from a read-only /var/task; only the temp dir is
+	// writable. The SQLite file there is per-instance and not durable, so
+	// sign-ins on the hosted site reset on cold starts until a hosted DB is used.
+	if (process.env.VERCEL) return path.join(os.tmpdir(), "mangocut-data");
 	return path.join(process.cwd(), ".data");
 }
 

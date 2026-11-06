@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 export interface AiUsageRecord {
@@ -7,8 +8,12 @@ export interface AiUsageRecord {
 }
 
 function resolveUsagePath(): string {
+	// Vercel Functions can only write to the temp dir (per-instance, not durable).
 	const dir =
-		process.env.MANGOCUT_DATA_DIR || path.join(process.cwd(), ".data");
+		process.env.MANGOCUT_DATA_DIR ||
+		(process.env.VERCEL
+			? path.join(os.tmpdir(), "mangocut-data")
+			: path.join(process.cwd(), ".data"));
 	fs.mkdirSync(dir, { recursive: true });
 	return path.join(dir, "ai-usage.json");
 }
