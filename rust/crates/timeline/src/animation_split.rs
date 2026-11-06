@@ -94,12 +94,23 @@ fn kind_of(channel: &Object) -> Option<&str> {
 // interpolation.ts
 // ---------------------------------------------------------------------------
 
+/// A total order equal to the sign of JS's `left - right` on finite numbers
+/// (so `-0` and `0` tie, and the sort stays stable). NaN sorts after every
+/// number, so malformed input cannot break the comparator contract.
+pub(crate) fn js_order_key(left: f64, right: f64) -> std::cmp::Ordering {
+    let normalize = |value: f64| {
+        if value.is_nan() {
+            f64::INFINITY
+        } else {
+            value + 0.0
+        }
+    };
+    normalize(left).total_cmp(&normalize(right))
+}
+
 /// Stable sort by `leftTime - rightTime`, like `Array.prototype.sort`.
 fn sort_by_time(keys: &mut [Object]) {
-    keys.sort_by(|left, right| {
-        let diff = time_of(left) - time_of(right);
-        diff.partial_cmp(&0.0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    keys.sort_by(|left, right| js_order_key(time_of(left), time_of(right)));
 }
 
 #[derive(Clone, Copy)]
@@ -499,7 +510,11 @@ fn split_discrete_channel_at_time(
     if should_include_split_boundary {
         let has_boundary_on_left = left_keys.iter().any(|key| time_of(key) == split_time);
         let has_boundary_on_right = right_keys.iter().any(|key| time_of(key) == 0.0);
-        let fallback = keys[0].get("value").cloned().unwrap_or(Value::Null);
+        let fallback = keys
+            .first()
+            .and_then(|key| key.get("value"))
+            .cloned()
+            .unwrap_or(Value::Null);
         let boundary_value = get_channel_value_at_time(&normalized, split_time, &fallback);
         if !has_boundary_on_left {
             left_keys.push(create_discrete_key(

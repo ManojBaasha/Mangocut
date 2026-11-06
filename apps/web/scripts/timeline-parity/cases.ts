@@ -14,6 +14,13 @@ export interface ParityCase {
 	op: TimelineOp;
 	newIds: string[];
 	ripple?: boolean;
+	/**
+	 * Error code the Rust engine must return for this case. Set where TS
+	 * silently no-ops on an unknown id, or where Rust is deliberately stricter
+	 * than TS (e.g. `invalid_result` for an overlap). The golden still records
+	 * what TS did.
+	 */
+	expectedError?: string;
 }
 
 export const FIXED_TRANSFORM = {
@@ -425,8 +432,6 @@ export const cases: ParityCase[] = [
 			elements: [
 				{ trackId: "audio-1", elementId: "au-1" },
 				{ trackId: "main", elementId: "el-1" },
-				{ trackId: "main", elementId: "missing" },
-				{ trackId: "audio-1", elementId: "el-2" },
 			],
 			splitTime: 30000,
 		},
@@ -557,7 +562,7 @@ export const cases: ParityCase[] = [
 			sourceTrackId: "main",
 			targetTrackId: "video-2",
 			elementId: "el-1",
-			newStartTime: 5000,
+			newStartTime: 130000,
 		},
 		newIds: [],
 	},
@@ -600,7 +605,6 @@ export const cases: ParityCase[] = [
 			elements: [
 				{ trackId: "main", elementId: "el-1" },
 				{ trackId: "audio-1", elementId: "au-1" },
-				{ trackId: "main", elementId: "missing" },
 			],
 		},
 		newIds: [],
@@ -669,9 +673,103 @@ export const cases: ParityCase[] = [
 			updates: [
 				{ trackId: "main", elementId: "el-1", patch: { opacity: 0.5, volume: -6 } },
 				{ trackId: "audio-1", elementId: "au-1", patch: { volume: 0.25 } },
-				{ trackId: "main", elementId: "missing", patch: { opacity: 0 } },
 			],
 		},
 		newIds: [],
+	},
+	// --- Task 8: agent error contract (TS no-ops, Rust returns typed errors) ---
+	{
+		name: "move_overlapping_is_invalid_result",
+		input: moveScene,
+		op: {
+			type: "moveElement",
+			sourceTrackId: "main",
+			targetTrackId: "video-2",
+			elementId: "el-1",
+			newStartTime: 100000,
+		},
+		newIds: [],
+		// TS lets the move overlap el-b; Rust refuses the invalid result.
+		expectedError: "invalid_result",
+	},
+	{
+		name: "split_unknown_element",
+		input: splitScene,
+		op: {
+			type: "splitElements",
+			elements: [{ trackId: "main", elementId: "missing" }],
+			splitTime: 30000,
+		},
+		newIds: ["right"],
+		expectedError: "element_not_found",
+	},
+	{
+		name: "delete_unknown_element",
+		input: splitScene,
+		op: {
+			type: "deleteElements",
+			elements: [{ trackId: "main", elementId: "missing" }],
+		},
+		newIds: [],
+		expectedError: "element_not_found",
+	},
+	{
+		name: "delete_unknown_track",
+		input: splitScene,
+		op: {
+			type: "deleteElements",
+			elements: [{ trackId: "nope", elementId: "el-1" }],
+		},
+		newIds: [],
+		expectedError: "track_not_found",
+	},
+	{
+		name: "update_unknown_element",
+		input: splitScene,
+		op: {
+			type: "updateElements",
+			updates: [{ trackId: "main", elementId: "missing", patch: { opacity: 0 } }],
+		},
+		newIds: [],
+		expectedError: "element_not_found",
+	},
+	{
+		name: "update_unknown_track",
+		input: splitScene,
+		op: {
+			type: "updateElements",
+			updates: [{ trackId: "nope", elementId: "el-1", patch: { opacity: 0 } }],
+		},
+		newIds: [],
+		expectedError: "track_not_found",
+	},
+	{
+		name: "trim_unknown_element",
+		input: splitScene,
+		op: { type: "trimElement", elementId: "missing", trimStart: 0, trimEnd: 0 },
+		newIds: [],
+		expectedError: "element_not_found",
+	},
+	{
+		name: "retime_unknown_element",
+		input: splitScene,
+		op: {
+			type: "retimeElement",
+			trackId: "main",
+			elementId: "missing",
+			retime: { rate: 2, maintainPitch: true },
+		},
+		newIds: [],
+		expectedError: "element_not_found",
+	},
+	{
+		name: "duplicate_unknown_element",
+		input: splitScene,
+		op: {
+			type: "duplicateElements",
+			elements: [{ trackId: "main", elementId: "missing" }],
+		},
+		newIds: ["copy", "track"],
+		expectedError: "element_not_found",
 	},
 ];

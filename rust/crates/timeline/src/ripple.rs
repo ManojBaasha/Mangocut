@@ -6,7 +6,8 @@ use std::collections::HashSet;
 
 use serde_json::Value;
 
-use crate::animation_split::js_num;
+use crate::animation_split::{js_num, js_order_key};
+use crate::error::TimelineError;
 use crate::model::SceneTracks;
 use crate::ops::elements::{ordered_track_ids, set_track_elements, track_elements};
 use crate::placement::{ElementSpan, ordered_tracks};
@@ -62,11 +63,7 @@ fn normalize_intervals(intervals: &[Interval]) -> Vec<Interval> {
     for interval in intervals {
         push_interval(&mut valid, interval.start_time, interval.end_time);
     }
-    valid.sort_by(|left, right| {
-        (left.start_time - right.start_time)
-            .partial_cmp(&0.0)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    valid.sort_by(|left, right| js_order_key(left.start_time, right.start_time));
     let mut merged: Vec<Interval> = Vec::new();
     for interval in valid {
         match merged.last_mut() {
@@ -197,10 +194,13 @@ pub fn compute(before: &SceneTracks, after: &SceneTracks) -> Vec<RippleAdjustmen
 
 /// `applyRippleAdjustments`: per track, latest adjustment first, shifts every
 /// element starting at or after `after_time` left by `shift_amount`.
-pub fn apply(tracks: &SceneTracks, adjustments: &[RippleAdjustment]) -> SceneTracks {
+pub fn apply(
+    tracks: &SceneTracks,
+    adjustments: &[RippleAdjustment],
+) -> Result<SceneTracks, TimelineError> {
     let mut result = tracks.clone();
     if adjustments.is_empty() {
-        return result;
+        return Ok(result);
     }
     for track_id in ordered_track_ids(tracks) {
         let mut track_adjustments: Vec<&RippleAdjustment> = adjustments
@@ -210,11 +210,9 @@ pub fn apply(tracks: &SceneTracks, adjustments: &[RippleAdjustment]) -> SceneTra
         if track_adjustments.is_empty() {
             continue;
         }
-        track_adjustments.sort_by(|first, second| {
-            (second.after_time - first.after_time)
-                .partial_cmp(&0.0)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Latest first (`second - first`), a total order: NaN sorts last.
+        track_adjustments
+            .sort_by(|first, second| js_order_key(second.after_time, first.after_time));
         let Some(mut elements) = track_elements(&result, &track_id) else {
             continue;
         };
@@ -235,10 +233,9 @@ pub fn apply(tracks: &SceneTracks, adjustments: &[RippleAdjustment]) -> SceneTra
                 }
             }
         }
-        // Shifted values came from valid elements, so they deserialize.
-        let _ = set_track_elements(&mut result, &track_id, elements);
+        set_track_elements(&mut result, &track_id, elements)?;
     }
-    result
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -280,7 +277,7 @@ mod tests {
                 shift_amount: 100.0
             }]
         );
-        let shifted = serde_json::to_value(apply(&after, &adjustments)).unwrap();
+        let shifted = serde_json::to_value(apply(&after, &adjustments).unwrap()).unwrap();
         assert_eq!(shifted["main"]["elements"][0]["startTime"], 0);
     }
 

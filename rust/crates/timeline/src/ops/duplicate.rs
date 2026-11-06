@@ -22,6 +22,9 @@ pub(super) fn duplicate(
     targets: &[ElementRef],
     ids: &mut IdSource,
 ) -> Result<Applied, TimelineError> {
+    for target in targets {
+        super::lookup::require_element(tracks, &target.track_id, &target.element_id)?;
+    }
     let original = tracks.clone();
     let track_types: Vec<_> = ordered_tracks(&original)
         .into_iter()

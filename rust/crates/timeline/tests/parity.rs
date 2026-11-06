@@ -34,13 +34,24 @@ fn assert_golden(name_prefix: &str) {
         let new_ids: Vec<String> = serde_json::from_value(golden["newIds"].clone()).unwrap();
         let ripple = golden["ripple"].as_bool().unwrap_or(false);
 
-        let output = apply_op(ApplyOpOptions {
+        let result = apply_op(ApplyOpOptions {
             tracks,
             op,
             new_ids,
             ripple,
-        })
-        .unwrap_or_else(|error| panic!("{path:?}: apply_op failed: {error:?}"));
+        });
+
+        // `expectedError`: TS no-ops on an unknown id (or accepts an invalid
+        // result); the agent contract is a typed error instead.
+        if let Some(code) = golden["expectedError"].as_str() {
+            let error = result
+                .err()
+                .unwrap_or_else(|| panic!("{path:?}: expected error {code}, got Ok"));
+            assert_eq!(error.code, code, "{path:?}");
+            assert!(error.hint.is_some(), "{path:?}: error needs a hint");
+            continue;
+        }
+        let output = result.unwrap_or_else(|error| panic!("{path:?}: apply_op failed: {error:?}"));
 
         let expected = &golden["expected"];
         if expected.is_null() {

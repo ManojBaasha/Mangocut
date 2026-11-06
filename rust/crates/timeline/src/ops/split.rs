@@ -195,6 +195,9 @@ pub(super) fn split(
     retain_side: RetainSide,
     ids: &mut IdSource,
 ) -> Result<Applied, TimelineError> {
+    for target in targets {
+        super::lookup::require_element(tracks, &target.track_id, &target.element_id)?;
+    }
     let request = SplitRequest {
         targets,
         split_time,

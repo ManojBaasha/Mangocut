@@ -96,10 +96,6 @@
       {
         "trackId": "audio-1",
         "elementId": "au-1"
-      },
-      {
-        "trackId": "main",
-        "elementId": "missing"
       }
     ]
   },

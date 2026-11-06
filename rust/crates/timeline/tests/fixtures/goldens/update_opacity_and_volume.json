@@ -103,13 +103,6 @@
         "patch": {
           "volume": 0.25
         }
-      },
-      {
-        "trackId": "main",
-        "elementId": "missing",
-        "patch": {
-          "opacity": 0
-        }
       }
     ]
   },

@@ -137,7 +137,7 @@ pub fn apply_placement(
             if *track_type == TrackType::Audio {
                 let TimelineTrack::Audio(track) = build_empty_track(&id, TrackType::Audio, None)
                 else {
-                    unreachable!("audio track type builds an audio track")
+                    return Ok(None);
                 };
                 let index = audio_insert_index(&updated, insert_index);
                 updated.audio.insert(index, track);

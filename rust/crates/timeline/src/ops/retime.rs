@@ -20,7 +20,10 @@ pub(super) fn retime(
     patch.insert(
         "retime".into(),
         match retime {
-            Some(retime) => serde_json::to_value(retime).expect("retime serializes"),
+            Some(retime) => serde_json::to_value(retime).map_err(|error| {
+                TimelineError::new("invalid_retime", format!("retime is malformed: {error}"))
+                    .with_hint("pass retime as { rate: number }")
+            })?,
             None => Value::Null,
         },
     );

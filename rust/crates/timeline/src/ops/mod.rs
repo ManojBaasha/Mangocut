@@ -4,6 +4,7 @@ mod delete;
 mod duplicate;
 pub(crate) mod elements;
 mod insert;
+mod lookup;
 mod move_element;
 mod retime;
 mod split;
@@ -209,15 +210,27 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
         new_ids,
         ripple,
     } = options;
+    check_new_ids(&tracks, &new_ids)?;
     let mut ids = IdSource::new(new_ids);
     let mut next = tracks.clone();
     let applied = apply(&mut next, &op, &mut ids)?;
     // Like `CommandManager.execute`: ripple runs once, after the whole op.
     if ripple {
         let adjustments = crate::ripple::compute(&tracks, &next);
-        next = crate::ripple::apply(&next, &adjustments);
+        next = crate::ripple::apply(&next, &adjustments)?;
     }
     let changed = next != tracks;
+    // Blame only violations the input did not already have.
+    if changed && let Some(violation) = crate::validate::first_new_violation(&tracks, &next) {
+        let error = violation.into_error();
+        return Err(TimelineError::invalid_result(
+            format!(
+                "the edit would leave the timeline invalid: {}",
+                error.message
+            ),
+            error.hint.unwrap_or_default(),
+        ));
+    }
     Ok(OpOutput {
         tracks: next,
         changed,
@@ -225,6 +238,22 @@ pub fn apply_op(options: ApplyOpOptions) -> Result<OpOutput, TimelineError> {
         created: applied.created,
         summary: applied.summary,
     })
+}
+
+/// New ids must be unique and must not collide with an existing element or
+/// track id (a colliding track id would append onto an existing track).
+fn check_new_ids(tracks: &SceneTracks, new_ids: &[String]) -> Result<(), TimelineError> {
+    let mut taken: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    for view in crate::placement::ordered_tracks(tracks) {
+        taken.insert(view.id);
+        taken.extend(view.elements.iter().map(|span| span.id));
+    }
+    for id in new_ids {
+        if !taken.insert(id.as_str()) {
+            return Err(TimelineError::duplicate_id(id));
+        }
+    }
+    Ok(())
 }
 
 fn apply(
@@ -348,7 +377,7 @@ fn remove_track(tracks: &mut SceneTracks, track_id: &str) -> Result<Applied, Tim
         .retain(|track| crate::placement::overlay_id(track) != track_id);
     tracks.audio.retain(|track| track.id != track_id);
     if tracks.overlay.len() == overlay_before && tracks.audio.len() == audio_before {
-        return Err(TimelineError::track_not_found(track_id));
+        return Err(lookup::track_not_found(tracks, track_id, None));
     }
     Ok(Applied::summary(format!("removed track {track_id}")))
 }
@@ -365,7 +394,7 @@ fn toggle_track_mute(tracks: &mut SceneTracks, track_id: &str) -> Result<Applied
     } else if let Some(track) = tracks.audio.iter_mut().find(|track| track.id == track_id) {
         track.muted = !track.muted;
     } else if !has_track(tracks, track_id) {
-        return Err(TimelineError::track_not_found(track_id));
+        return Err(lookup::track_not_found(tracks, track_id, None));
     }
     Ok(Applied::summary(format!(
         "toggled mute on track {track_id}"
@@ -390,7 +419,7 @@ fn toggle_track_visibility(
             OverlayTrack::Effect(t) => t.hidden = !t.hidden,
         }
     } else if !has_track(tracks, track_id) {
-        return Err(TimelineError::track_not_found(track_id));
+        return Err(lookup::track_not_found(tracks, track_id, None));
     }
     Ok(Applied::summary(format!(
         "toggled visibility on track {track_id}"

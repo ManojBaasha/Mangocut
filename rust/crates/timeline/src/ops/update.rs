@@ -186,9 +186,14 @@ pub(super) fn update(
 
     let mut updated = 0;
     for entry in updates {
-        // Unknown tracks and elements are skipped, like TS.
+        // TS skips unknown tracks and elements; the agent contract reports them.
+        super::lookup::require_element(tracks, &entry.track_id, &entry.element_id)?;
         let Some(mut elements) = track_elements(tracks, &entry.track_id) else {
-            continue;
+            return Err(super::lookup::track_not_found(
+                tracks,
+                &entry.track_id,
+                None,
+            ));
         };
         let Some(current) = elements
             .iter()
@@ -196,9 +201,18 @@ pub(super) fn update(
             .and_then(Value::as_object)
             .cloned()
         else {
-            continue;
+            return Err(super::lookup::element_not_found(
+                tracks,
+                Some(&entry.track_id),
+                &entry.element_id,
+            ));
         };
-        let patch = entry.patch.as_object().expect("validated above");
+        let Some(patch) = entry.patch.as_object() else {
+            return Err(
+                TimelineError::new("invalid_patch", "an element patch must be an object")
+                    .with_hint("pass the fields to change as an object"),
+            );
+        };
         let next = Value::Object(apply_element_update(
             &current,
             patch,
@@ -266,9 +280,20 @@ mod tests {
     }
 
     #[test]
-    fn unknown_ids_change_nothing() {
-        assert!(!run(json!({"opacity": 0}), "main", "nope").changed);
-        assert!(!run(json!({"opacity": 0}), "nope", "el-1").changed);
+    fn unknown_ids_are_typed_errors() {
+        let run_err = |track: &str, element: &str| {
+            apply_op(ApplyOpOptions {
+                tracks: scene(),
+                op: serde_json::from_value(json!({"type": "updateElements", "updates": [
+                    {"trackId": track, "elementId": element, "patch": {"opacity": 0}}]}))
+                .unwrap(),
+                new_ids: vec![],
+                ripple: false,
+            })
+            .unwrap_err()
+        };
+        assert_eq!(run_err("main", "nope").code, "element_not_found");
+        assert_eq!(run_err("nope", "el-1").code, "track_not_found");
         assert!(run(json!({"opacity": 0}), "main", "el-1").changed);
     }
 

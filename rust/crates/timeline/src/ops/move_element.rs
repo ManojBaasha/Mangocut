@@ -3,12 +3,13 @@
 //!
 //! `create_track` builds a track whose id is `target_track_id` (no id is
 //! consumed). Where TS throws (unknown source, unknown target, incompatible
-//! track) the op reports `changed: false`.
+//! track) the op returns a typed error.
 
 use serde_json::Value;
 
 use super::elements::{element_id, set_track_elements, track_elements};
 use super::insert::element_type;
+use super::lookup::{element_not_found, track_not_found};
 use super::{Applied, CreateTrack};
 use crate::animation_split::js_num;
 use crate::error::TimelineError;
@@ -44,17 +45,15 @@ pub(super) fn move_element(
     new_start_time: Ticks,
     create_track: Option<&CreateTrack>,
 ) -> Result<Applied, TimelineError> {
-    let unchanged = |message: &str| Ok(Applied::summary(message.to_string()));
-
     let Some(source_elements) = track_elements(tracks, source_track_id) else {
-        return unchanged("Source track or element not found");
+        return Err(track_not_found(tracks, source_track_id, None));
     };
     let Some(element) = source_elements
         .iter()
         .find(|element| element_id(element) == Some(moved_id))
         .cloned()
     else {
-        return unchanged("Source track or element not found");
+        return Err(element_not_found(tracks, Some(source_track_id), moved_id));
     };
 
     let mut working = tracks.clone();
@@ -66,11 +65,15 @@ pub(super) fn move_element(
         (Some(track_type), _) => track_type,
         (None, Some(create)) => {
             if !insert_track(&mut working, target_track_id, create) {
-                return unchanged("Target track not found");
+                return Err(TimelineError::new(
+                    "invalid_track",
+                    format!("cannot create a {:?} track", create.track_type),
+                )
+                .with_hint("createTrack.type must be video, text, audio, graphic or effect"));
             }
             create.track_type
         }
-        (None, None) => return unchanged("Target track not found"),
+        (None, None) => return Err(track_not_found(tracks, target_track_id, None)),
     };
 
     let Some(kind) = element
@@ -78,13 +81,21 @@ pub(super) fn move_element(
         .and_then(Value::as_str)
         .and_then(element_type)
     else {
-        return Err(TimelineError::new(
-            "invalid_element",
-            "element has an unknown type",
-        ));
+        return Err(
+            TimelineError::new("invalid_element", "element has an unknown type")
+                .with_hint("the element's type must be one of the known element types"),
+        );
     };
     if let Err(message) = validate_element_track_compatibility(kind, target_type) {
-        return unchanged(&message);
+        let wanted = crate::placement::track_type_for_element_type(kind);
+        return Err(TimelineError::incompatible_track(
+            message,
+            format!(
+                "move it to a {} track; valid ids: {}",
+                super::track_type_name(wanted),
+                super::lookup::track_ids(tracks, Some(wanted))
+            ),
+        ));
     }
 
     let adjusted =

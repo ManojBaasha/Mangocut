@@ -96,14 +96,6 @@
       {
         "trackId": "main",
         "elementId": "el-1"
-      },
-      {
-        "trackId": "main",
-        "elementId": "missing"
-      },
-      {
-        "trackId": "audio-1",
-        "elementId": "el-2"
       }
     ],
     "splitTime": 30000

@@ -45,6 +45,29 @@ impl TimelineError {
             "missing_ids",
             "the operation needs more new ids than were supplied",
         )
+        .with_hint(
+            "pass one fresh unique id per created element (plus one per created track) in newIds",
+        )
+    }
+
+    pub fn duplicate_id(id: &str) -> Self {
+        Self::new(
+            "duplicate_id",
+            format!("new id {id} is already used by the timeline or repeated in newIds"),
+        )
+        .with_hint("generate fresh unique ids that match no existing element or track id")
+    }
+
+    pub fn invalid_trim(message: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new("invalid_trim", message).with_hint(hint)
+    }
+
+    pub fn incompatible_track(message: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new("incompatible_track", message).with_hint(hint)
+    }
+
+    pub fn invalid_result(message: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new("invalid_result", message).with_hint(hint)
     }
 
     pub fn unsupported_op(op: &str) -> Self {
@@ -52,6 +75,7 @@ impl TimelineError {
             "unsupported_op",
             format!("operation {op} is not implemented yet"),
         )
+        .with_hint("use one of the supported operation types")
     }
 
     /// Prefixes the message (used by `Batch` to name the failing op).

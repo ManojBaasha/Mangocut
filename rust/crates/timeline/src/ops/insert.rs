@@ -189,7 +189,11 @@ pub(super) fn insert(
                 .find(|view| view.id == track_id)
                 .map(|view| validate_element_track_compatibility(element_type, view.track_type));
             return match compat {
-                None => Err(TimelineError::track_not_found(track_id)),
+                None => Err(super::lookup::track_not_found(
+                    tracks,
+                    track_id,
+                    Some(crate::placement::track_type_for_element_type(element_type)),
+                )),
                 Some(Err(message)) => Ok(unchanged(message)),
                 Some(Ok(())) => Ok(unchanged(format!("could not place on {track_id}"))),
             };

@@ -13,9 +13,11 @@ use crate::model::{OverlayTrack, SceneTracks};
 use crate::placement::overlay_id;
 
 fn to_values<T: Serialize>(elements: &[T]) -> Vec<Value> {
+    // Serializing derived structs to `Value` cannot fail; a failure would
+    // surface as `Null`, which `from_values` then rejects as malformed.
     elements
         .iter()
-        .map(|element| serde_json::to_value(element).expect("elements serialize"))
+        .map(|element| serde_json::to_value(element).unwrap_or(Value::Null))
         .collect()
 }
 

@@ -80,7 +80,7 @@
     "sourceTrackId": "main",
     "targetTrackId": "video-2",
     "elementId": "el-1",
-    "newStartTime": 5000
+    "newStartTime": 130000
   },
   "newIds": [],
   "ripple": false,
@@ -123,7 +123,7 @@
             "mediaId": "media-1",
             "name": "clip.mp4",
             "duration": 120000,
-            "startTime": 5000,
+            "startTime": 130000,
             "trimStart": 0,
             "trimEnd": 0,
             "sourceDuration": 120000,

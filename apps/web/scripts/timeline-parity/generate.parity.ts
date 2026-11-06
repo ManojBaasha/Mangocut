@@ -33,6 +33,7 @@ describe("timeline parity goldens", () => {
 				ripple: testCase.ripple ?? false,
 				expected,
 			};
+			if (testCase.expectedError) golden.expectedError = testCase.expectedError;
 			const text = `${JSON.stringify(golden, null, 2)}\n`;
 			const path = resolve(goldensDir, `${testCase.name}.json`);
 			if (update) {

@@ -1,8 +1,9 @@
 //! `DeleteElements`. Mirrors `DeleteElementsCommand`: removes every element
-//! matching a (track, element) pair; unknown pairs are ignored.
+//! matching a (track, element) pair; an unknown pair is an error.
 
 use super::Applied;
 use super::elements::{element_id, ordered_track_ids, set_track_elements, track_elements};
+use super::lookup::require_element;
 use crate::error::TimelineError;
 use crate::model::{ElementRef, SceneTracks};
 
@@ -10,6 +11,9 @@ pub(super) fn delete(
     tracks: &mut SceneTracks,
     targets: &[ElementRef],
 ) -> Result<Applied, TimelineError> {
+    for target in targets {
+        require_element(tracks, &target.track_id, &target.element_id)?;
+    }
     let mut removed = 0;
     for track_id in ordered_track_ids(tracks) {
         let Some(elements) = track_elements(tracks, &track_id) else {
