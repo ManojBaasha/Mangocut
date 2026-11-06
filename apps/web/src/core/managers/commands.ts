@@ -11,6 +11,7 @@ interface CommandHistoryEntry {
 
 export class CommandManager {
 	public isRippleEnabled = false;
+	private commandRipple = false;
 	private history: CommandHistoryEntry[] = [];
 	private redoStack: CommandHistoryEntry[] = [];
 	private reactors: Array<() => void> = [];
@@ -18,11 +19,9 @@ export class CommandManager {
 	constructor(private editor: EditorCore) {}
 
 	execute({ command }: { command: Command }): Command {
-		const beforeTracks = this.isRippleEnabled
-			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
-			: null;
+		const beforeTracks = this.getRippleBaseline(command);
 		const previousSelection = this.getSelectionSnapshot();
-		const result = command.execute();
+		const result = this.runWithRipple(command, () => command.execute());
 		this.applyRippleIfEnabled({ beforeTracks });
 		const selectionOverride = this.applySelectionOverride(result);
 		this.runReactors();
@@ -73,11 +72,11 @@ export class CommandManager {
 			return;
 		}
 
-		const beforeTracks = this.isRippleEnabled
-			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
-			: null;
+		const beforeTracks = this.getRippleBaseline(entry.command);
 		const previousSelection = this.getSelectionSnapshot();
-		const result = entry.command.redo();
+		const result = this.runWithRipple(entry.command, () =>
+			entry.command.redo(),
+		);
 		this.applyRippleIfEnabled({ beforeTracks });
 		const selectionOverride = this.applySelectionOverride(result);
 		this.runReactors();
@@ -100,6 +99,34 @@ export class CommandManager {
 	clear(): void {
 		this.history = [];
 		this.redoStack = [];
+	}
+
+	/**
+	 * Whether a command that ripples itself (`handlesRipple`) should ripple
+	 * now. True only while this manager executes or redoes such a command with
+	 * ripple enabled, so direct `command.execute()` calls (live previews with
+	 * pushHistory: false) never ripple, as before.
+	 */
+	shouldCommandRipple(): boolean {
+		return this.commandRipple;
+	}
+
+	private runWithRipple<T>(command: Command, run: () => T): T {
+		const previous = this.commandRipple;
+		this.commandRipple = this.isRippleEnabled && command.handlesRipple;
+		try {
+			return run();
+		} finally {
+			this.commandRipple = previous;
+		}
+	}
+
+	/** Tracks before the command, when this manager must ripple it itself. */
+	private getRippleBaseline(command: Command): SceneTracks | null {
+		if (!this.isRippleEnabled || command.handlesRipple) {
+			return null;
+		}
+		return this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null;
 	}
 
 	private getSelectionSnapshot(): ElementRef[] {

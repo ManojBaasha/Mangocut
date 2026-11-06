@@ -3,6 +3,10 @@ import { Command, type CommandResult } from "./base-command";
 export class BatchCommand extends Command {
 	constructor(private commands: Command[]) {
 		super();
+		// Only when every child ripples itself; otherwise CommandManager ripples
+		// the whole batch once and the children are told not to.
+		this.handlesRipple =
+			commands.length > 0 && commands.every((command) => command.handlesRipple);
 	}
 
 	execute(): CommandResult | undefined {

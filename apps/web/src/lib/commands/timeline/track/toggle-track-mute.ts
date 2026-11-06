@@ -1,9 +1,10 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { SceneTracks } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import { canTrackHaveAudio, findTrackInSceneTracks, updateTrackInSceneTracks } from "@/lib/timeline";
+import { runTimelineOp } from "../run-timeline-op";
 
 export class ToggleTrackMuteCommand extends Command {
+	handlesRipple = true;
 	private savedState: SceneTracks | null = null;
 
 	constructor(private trackId: string) {
@@ -14,22 +15,15 @@ export class ToggleTrackMuteCommand extends Command {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const targetTrack = findTrackInSceneTracks({
+		const result = runTimelineOp({
 			tracks: this.savedState,
-			trackId: this.trackId,
+			op: { type: "toggleTrackMute", trackId: this.trackId },
+			ripple: editor.command.shouldCommandRipple(),
 		});
-		if (!targetTrack) {
-			return;
+		if (result.ok && result.output.changed) {
+			editor.timeline.updateTracks(result.output.tracks);
 		}
-
-		const updatedTracks = updateTrackInSceneTracks({
-			tracks: this.savedState,
-			trackId: this.trackId,
-			update: (track) =>
-				canTrackHaveAudio(track) ? { ...track, muted: !track.muted } : track,
-		});
-
-		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {
