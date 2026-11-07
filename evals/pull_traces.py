@@ -93,6 +93,8 @@ class AgentTurn:
     model_calls: int = 0
     total_cost: float = 0.0
     scores: dict[str, float] = field(default_factory=dict)
+    # JSON summary of the AI Preview timeline after the turn (ground truth for judges).
+    final_state: Optional[str] = None
 
     @property
     def tool_errors(self) -> list[ToolSpan]:
@@ -203,6 +205,7 @@ def _build_turn(lf: Langfuse, root: Any) -> AgentTurn:
             for s in scores
             if isinstance(getattr(s, "value", None), (int, float))
         },
+        final_state=_as_text(meta.get("finalState")) or None,
     )
 
 
@@ -213,11 +216,17 @@ def _clip(value: Any) -> Any:
     return text[:TOOL_OUTPUT_CHARS] + "…[clipped for eval]"
 
 
+def _clip_text(text: str, limit: int = 12_000) -> str:
+    return text if len(text) <= limit else text[:limit] + "…[clipped for eval]"
+
+
 def to_test_case(turn: AgentTurn) -> LLMTestCase:
     return LLMTestCase(
         name=turn.trace_id,
         input=turn.user_message or "(empty)",
         actual_output=turn.final_text or "(empty)",
+        # Ground truth for outcome judges: what the timeline actually looks like.
+        context=[_clip_text(turn.final_state)] if turn.final_state else None,
         tools_called=[
             ToolCall(
                 name=t.name,

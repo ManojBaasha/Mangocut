@@ -642,8 +642,6 @@ describe("agent edit handlers report engine rejections", () => {
 		await quietly(async () => {
 			const result = await agent.run("trim_element", {
 				elementId: "a",
-				trimStartSeconds: 0,
-				trimEndSeconds: 0,
 				durationSeconds: 1.5,
 			});
 			expect(result.ok).toBe(false);
@@ -659,12 +657,52 @@ describe("agent edit handlers report engine rejections", () => {
 		state.tracks.main.elements = [clip("a", 0), clip("b", 1)] as never;
 		const result = await agent.run("trim_element", {
 			elementId: "a",
-			trimStartSeconds: 0,
-			trimEndSeconds: 9.5,
 			durationSeconds: 0.5,
 		});
-		expect(result).toEqual({ ok: true });
+		expect(result).toMatchObject({
+			ok: true,
+			durationSeconds: 0.5,
+			sourceStartSeconds: 0,
+			sourceEndSeconds: 0.5,
+		});
 		expect(element("main", "a")).toMatchObject({ duration: SECOND / 2, trimEnd: 9.5 * SECOND });
+		agent.clear();
+	});
+
+	test("trim keeps a middle section of the source", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0)] as never;
+		const result = await agent.run("trim_element", {
+			elementId: "a",
+			sourceStartSeconds: 2,
+			durationSeconds: 3,
+		});
+		expect(result).toMatchObject({ ok: true, sourceStartSeconds: 2, sourceEndSeconds: 5 });
+		expect(element("main", "a")).toMatchObject({
+			startTime: 0,
+			duration: 3 * SECOND,
+			trimStart: 2 * SECOND,
+			trimEnd: 5 * SECOND,
+		});
+		agent.clear();
+	});
+
+	test("trim longer than the source keeps the whole source and says so", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0)] as never;
+		const result = await agent.run("trim_element", { elementId: "a", durationSeconds: 20 });
+		expect(result).toMatchObject({ ok: true, durationSeconds: 10 });
+		expect(typeof result.note).toBe("string");
+		agent.clear();
+	});
+
+	test("close_gaps packs the main track back to back", async () => {
+		const agent = await agentCommands();
+		state.tracks.main.elements = [clip("a", 0), clip("b", 5), clip("c", 9)] as never;
+		const result = await agent.run("close_gaps", {});
+		expect(result).toMatchObject({ ok: true, moved: 2, trackDurationSeconds: 3 });
+		expect(element("main", "b")).toMatchObject({ startTime: SECOND });
+		expect(element("main", "c")).toMatchObject({ startTime: 2 * SECOND });
 		agent.clear();
 	});
 
@@ -675,8 +713,7 @@ describe("agent edit handlers report engine rejections", () => {
 		await quietly(async () => {
 			expect(await agent.run("trim_element", {
 				elementId: "nope",
-				trimStartSeconds: 0,
-				trimEndSeconds: 0,
+				durationSeconds: 1,
 			})).toMatchObject({ ok: false, error: { code: "element_not_found" } });
 			expect(await agent.run("delete_elements", {
 				elements: [{ trackId: "main", elementId: "nope" }],

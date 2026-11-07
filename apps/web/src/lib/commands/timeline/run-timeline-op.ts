@@ -126,7 +126,11 @@ export function runTimelineOp({
 		}
 	} catch (caught) {
 		const error = caught instanceof Error ? caught : new Error(String(caught));
-		if (!isNoOpError(error)) {
+		if (isStrictTimelineValidation() && error instanceof TimelineOpError) {
+			// Agent edit the engine rejected: the error goes back to the agent as
+			// its tool result, so it is expected, not an app failure.
+			console.warn("Timeline edit rejected:", error.code, error.message);
+		} else if (!isNoOpError(error)) {
 			console.error("Timeline edit failed:", error);
 		}
 		return { ok: false, error };

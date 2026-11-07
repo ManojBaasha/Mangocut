@@ -1,0 +1,17 @@
+Warm Sunset - Golden Hour
+=========================
+Best for: Sunsets, golden hour, warm travel and lifestyle footage, beaches, road trips, anything that should feel warm and nostalgic
+
+FFmpeg filter chain:
+curves=r='0/0 0.1/0.08 0.5/0.55 0.85/0.9 1/1':g='0/0 0.1/0.07 0.5/0.5 0.85/0.86 1/0.97':b='0/0 0.1/0.06 0.5/0.44 0.85/0.8 1/0.9':m='0/0 0.08/0.05 0.5/0.52 0.85/0.92 1/1',colorbalance=rs=0.05:gs=0.01:bs=-0.06:rm=0.06:gm=0.02:bm=-0.05:rh=0.04:gh=0.02:bh=-0.04,eq=contrast=1.12:brightness=0.03:saturation=1.2,unsharp=5:5:0.4
+
+What it does:
+- Curves: red lifted through mids and highlights, blue pulled down (capped at 0.9), shadows lifted slightly for a soft film look
+- Color balance: warm push in shadows, mids and highlights (red up, blue down)
+- EQ: gentle contrast, small brightness lift, moderate saturation so skin stays natural
+- Unsharp: light sharpening
+
+Notes:
+- The warm counterpart to Cool Dramatic - Sunset Ocean
+- For a stronger golden cast raise rm to 0.09 and lower bm to -0.08
+- If skin turns orange, reduce saturation to 1.1

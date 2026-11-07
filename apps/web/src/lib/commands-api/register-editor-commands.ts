@@ -14,7 +14,9 @@ import {
 	buildTextElement,
 } from "@/lib/timeline/element-utils";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
+import { clampRetimeRate } from "@/lib/retime/rate";
 import { buildDefaultMaskInstance } from "@/lib/masks";
+import { effectsRegistry } from "@/lib/effects";
 import { recordPreviewDecision } from "@/lib/ai/observability/client";
 
 const emptyArgs = z.object({});
@@ -42,6 +44,82 @@ function withTarget(
 		return editor.shadow.runOnShadow(fn);
 	}
 	return fn();
+}
+
+function findElementOnTracks({
+	editor,
+	elementId,
+}: {
+	editor: EditorCore;
+	elementId: string;
+}): { trackId: string; element: TimelineElement } | null {
+	const tracks = editor.scenes.getActiveScene().tracks;
+	for (const track of [tracks.main, ...tracks.overlay, ...tracks.audio]) {
+		const element = (track.elements as TimelineElement[]).find(
+			(e) => e.id === elementId,
+		);
+		if (element) return { trackId: track.id, element };
+	}
+	return null;
+}
+
+/** Gaps or overlaps smaller than this are float error, not intent (~1 frame). */
+const SNAP_TOLERANCE_TICKS = Math.round(0.04 * TICKS_PER_SECOND);
+
+/**
+ * Snap a requested start time to the nearest clip edge on the main track when
+ * it is within a frame of it. Agents compute start times by adding durations,
+ * and float error (5.499999 vs 5.5) would otherwise overlap the previous clip
+ * by a tick and push the new clip onto an overlay track.
+ */
+function snapToMainTrackEdge({
+	editor,
+	time,
+}: {
+	editor: EditorCore;
+	time: number;
+}): number {
+	const main = editor.scenes?.getActiveSceneOrNull?.()?.tracks.main;
+	if (!main) return time;
+	let best = time;
+	let bestDistance = SNAP_TOLERANCE_TICKS + 1;
+	for (const element of main.elements) {
+		for (const edge of [element.startTime, element.startTime + element.duration]) {
+			const distance = Math.abs(edge - time);
+			if (distance < bestDistance) {
+				best = edge;
+				bestDistance = distance;
+			}
+		}
+	}
+	return best;
+}
+
+function findPlacedMedia({
+	editor,
+	mediaId,
+	startTime,
+}: {
+	editor: EditorCore;
+	mediaId: string;
+	startTime: number;
+}): { elementId: string; trackId: string; trackKind: "main" | "overlay" } | null {
+	const tracks = editor.scenes?.getActiveSceneOrNull?.()?.tracks;
+	if (!tracks) return null;
+	const candidates: Array<{ trackKind: "main" | "overlay"; track: typeof tracks.main | (typeof tracks.overlay)[number] }> = [
+		{ trackKind: "main", track: tracks.main },
+		...tracks.overlay.map((track) => ({ trackKind: "overlay" as const, track })),
+	];
+	for (const { trackKind, track } of candidates) {
+		const element = (track.elements as TimelineElement[]).find(
+			(e) =>
+				"mediaId" in e &&
+				e.mediaId === mediaId &&
+				Math.abs(e.startTime - startTime) <= SNAP_TOLERANCE_TICKS,
+		);
+		if (element) return { elementId: element.id, trackId: track.id, trackKind };
+	}
+	return null;
 }
 
 /** Register editor-parity commands the agent and UI share. */
@@ -182,7 +260,7 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		definition: {
 			name: "place_media",
 			description:
-				"Place an already-imported project media asset onto the timeline (AI Preview when target is shadow). Prefer this over import_media_paths when get_project_summary already lists the asset.",
+				"Place an already-imported project media asset onto the timeline (AI Preview when target is shadow). Prefer this over import_media_paths when get_project_summary already lists the asset. Omit startTimeSeconds to append at the end of the timeline: do that to put clips one after another. The result says which track the clip landed on; a clip lands on an overlay track only when the main track is occupied at that time.",
 			category: "media",
 			argsSchema: z
 				.object({
@@ -210,7 +288,10 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 				}
 				const startTime =
 					startTimeSeconds !== undefined
-						? Math.round(startTimeSeconds * TICKS_PER_SECOND)
+						? snapToMainTrackEdge({
+								editor,
+								time: Math.round(startTimeSeconds * TICKS_PER_SECOND),
+							})
 						: editor.timeline.getTotalDuration();
 				const duration =
 					asset.duration != null
@@ -228,12 +309,21 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 					placement: { mode: "auto" },
 				});
 				if (error) return editFailure(error, "insert_failed");
+				const placed = findPlacedMedia({ editor, mediaId: asset.id, startTime });
 				return {
 					ok: true,
 					mediaId: asset.id,
 					name: asset.name,
+					elementId: placed?.elementId,
+					trackId: placed?.trackId,
+					trackKind: placed?.trackKind,
 					startTimeSeconds: startTime / TICKS_PER_SECOND,
 					durationSeconds: duration / TICKS_PER_SECOND,
+					...(placed?.trackKind === "overlay"
+						? {
+								note: "The main track was occupied at this time, so the clip went on an overlay track (layered above). To play clips in sequence, place them without startTimeSeconds.",
+							}
+						: {}),
 				};
 			}),
 	});
@@ -308,34 +398,170 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 	registerCommand({
 		definition: {
 			name: "trim_element",
-			description: "Trim an element (times in seconds)",
+			description:
+				"Choose which part of a clip's source media plays. Keeps `durationSeconds` of the source starting `sourceStartSeconds` into it (default 0 = from the beginning); the clip's timeline start stays put. Example: keep the first 3 seconds -> { elementId, durationSeconds: 3 }. Returns the clip's new start, duration and source range. Gaps this leaves are not closed: call close_gaps afterwards to pack the track.",
 			category: "editing",
 			argsSchema: z.object({
 				elementId: z.string(),
-				trimStartSeconds: z.number().min(0),
-				trimEndSeconds: z.number().min(0),
-				startTimeSeconds: z.number().min(0).optional(),
-				durationSeconds: z.number().min(0).optional(),
+				durationSeconds: z
+					.number()
+					.positive()
+					.describe("How long the clip should last on the timeline, in seconds."),
+				sourceStartSeconds: z
+					.number()
+					.min(0)
+					.optional()
+					.describe("Where in the source media to start, in seconds (default 0)."),
 			}),
 			exposeToAgent: true,
 		},
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
+				const found = findElementOnTracks({ editor, elementId: args.elementId });
+				if (!found) {
+					return {
+						ok: false as const,
+						reason: `No clip with id ${args.elementId}`,
+						error: {
+							code: "element_not_found",
+							message: `No clip with id ${args.elementId}`,
+							hint: "Call get_timeline_detail to list clip ids.",
+						},
+					};
+				}
+				const { element } = found;
+				const rate =
+					"retime" in element && element.retime
+						? clampRetimeRate({ rate: element.retime.rate })
+						: 1;
+				const sourceStart = Math.round(
+					(args.sourceStartSeconds ?? 0) * TICKS_PER_SECOND,
+				);
+				const sourceTotal =
+					element.sourceDuration ??
+					element.trimStart + element.duration * rate + element.trimEnd;
+				const available = Math.max(0, sourceTotal - sourceStart);
+				if (available <= 0) {
+					return {
+						ok: false as const,
+						reason: `sourceStartSeconds is past the end of the source (${(sourceTotal / TICKS_PER_SECOND).toFixed(2)}s)`,
+						error: {
+							code: "invalid_trim",
+							message: "sourceStartSeconds is past the end of the source",
+							hint: `Use a sourceStartSeconds below ${(sourceTotal / TICKS_PER_SECOND).toFixed(2)}.`,
+						},
+					};
+				}
+				const requestedSpan = args.durationSeconds * TICKS_PER_SECOND * rate;
+				const sourceSpan = Math.min(requestedSpan, available);
+				const duration = Math.round(sourceSpan / rate);
 				const error = editor.timeline.updateElementTrim({
 					elementId: args.elementId,
-					trimStart: args.trimStartSeconds * TICKS_PER_SECOND,
-					trimEnd: args.trimEndSeconds * TICKS_PER_SECOND,
-					startTime:
-						args.startTimeSeconds === undefined
-							? undefined
-							: args.startTimeSeconds * TICKS_PER_SECOND,
-					duration:
-						args.durationSeconds === undefined
-							? undefined
-							: args.durationSeconds * TICKS_PER_SECOND,
+					trimStart: sourceStart,
+					trimEnd: Math.max(0, Math.round(sourceTotal - sourceStart - sourceSpan)),
+					duration,
 				});
 				if (error) return editFailure(error, "trim_failed");
-				return { ok: true };
+				return {
+					ok: true,
+					elementId: args.elementId,
+					startTimeSeconds: element.startTime / TICKS_PER_SECOND,
+					durationSeconds: duration / TICKS_PER_SECOND,
+					sourceStartSeconds: sourceStart / TICKS_PER_SECOND,
+					sourceEndSeconds: (sourceStart + sourceSpan) / TICKS_PER_SECOND,
+					...(sourceSpan < requestedSpan
+						? {
+								note: `Source is shorter than requested; kept ${(duration / TICKS_PER_SECOND).toFixed(2)}s.`,
+							}
+						: {}),
+				};
+			}),
+	});
+
+	registerCommand({
+		definition: {
+			name: "close_gaps",
+			description:
+				"Pack the clips on one track back to back in their current order, removing gaps between them (one undoable edit). Defaults to the main track. Use after trimming or deleting clips.",
+			category: "editing",
+			argsSchema: z.object({
+				trackId: z
+					.string()
+					.optional()
+					.describe("Track to pack (default: the main video track)."),
+				startAtSeconds: z
+					.number()
+					.min(0)
+					.optional()
+					.describe("Where the first clip should start (default: where it starts now)."),
+			}),
+			exposeToAgent: true,
+		},
+		handler: (args, ctx) =>
+			withTarget(editor, ctx.target, () => {
+				const tracks = editor.scenes.getActiveScene().tracks;
+				const all = [tracks.main, ...tracks.overlay, ...tracks.audio];
+				const track = args.trackId
+					? all.find((t) => t.id === args.trackId)
+					: tracks.main;
+				if (!track) {
+					return {
+						ok: false as const,
+						reason: `No track with id ${args.trackId}`,
+						error: {
+							code: "track_not_found",
+							message: `No track with id ${args.trackId}`,
+							hint: `Track ids: ${all.map((t) => t.id).join(", ")}`,
+						},
+					};
+				}
+				const ordered = [...track.elements].sort(
+					(a, b) => a.startTime - b.startTime,
+				);
+				if (ordered.length === 0) return { ok: true, moved: 0, clips: [] };
+				let cursor =
+					args.startAtSeconds !== undefined
+						? Math.round(args.startAtSeconds * TICKS_PER_SECOND)
+						: ordered[0].startTime;
+				const updates: Array<{
+					trackId: string;
+					elementId: string;
+					patch: Partial<TimelineElement>;
+				}> = [];
+				const clips: Array<{ elementId: string; startTimeSeconds: number; durationSeconds: number }> = [];
+				for (const element of ordered) {
+					if (element.startTime !== cursor) {
+						updates.push({
+							trackId: track.id,
+							elementId: element.id,
+							patch: { startTime: cursor },
+						});
+					}
+					clips.push({
+						elementId: element.id,
+						startTimeSeconds: cursor / TICKS_PER_SECOND,
+						durationSeconds: element.duration / TICKS_PER_SECOND,
+					});
+					cursor += element.duration;
+				}
+				const error = editor.timeline.updateElements({ updates });
+				if (error) return editFailure(error, "close_gaps_failed");
+				const otherTracks = all
+					.filter((t) => t.id !== track.id && t.elements.length > 0)
+					.map((t) => ({ trackId: t.id, type: t.type, clips: t.elements.length }));
+				return {
+					ok: true,
+					trackId: track.id,
+					moved: updates.length,
+					trackDurationSeconds: cursor / TICKS_PER_SECOND,
+					clips,
+					...(otherTracks.length > 0
+						? {
+								otherTracksWithClips: otherTracks,
+								note: "Only this track was packed. Clips on the other tracks listed here keep their times; move them onto this track (move_element with targetTrackId, then close_gaps) if they belong in the same sequence.",
+							}
+						: {}),
+				};
 			}),
 	});
 
@@ -447,7 +673,8 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 	registerCommand({
 		definition: {
 			name: "add_effect",
-			description: "Add a clip effect (e.g. blur) to a timeline element",
+			description:
+				"Add a built-in real-time clip effect (e.g. blur) to a timeline element. Color grades are not effects: use list_grades / apply_grade for those.",
 			category: "editing",
 			argsSchema: z.object({
 				trackId: z.string(),
@@ -458,6 +685,18 @@ export function registerEditorCommands({ editor }: { editor: EditorCore }): void
 		},
 		handler: (args, ctx) =>
 			withTarget(editor, ctx.target, () => {
+				if (!effectsRegistry.has(args.effectType)) {
+					const known = effectsRegistry.getAll().map((d) => d.type);
+					return {
+						ok: false as const,
+						reason: `Unknown effect: ${args.effectType}`,
+						error: {
+							code: "unknown_effect",
+							message: `Unknown effect: ${args.effectType}`,
+							hint: `Effect types: ${known.join(", ")}. For color grades use list_grades and apply_grade.`,
+						},
+					};
+				}
 				const effectId = editor.timeline.addClipEffect({
 					trackId: args.trackId,
 					elementId: args.elementId,

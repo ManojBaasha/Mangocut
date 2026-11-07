@@ -162,6 +162,7 @@ export class TurnTrace {
 	readonly userMessage: string;
 	readonly startTime: number;
 	private toolCount = 0;
+	private toolErrorCount = 0;
 	private ended = false;
 	private readonly batcher: BatcherLike | null;
 
@@ -230,6 +231,7 @@ export class TurnTrace {
 		endTime?: number;
 	}): void {
 		this.toolCount += 1;
+		if (error) this.toolErrorCount += 1;
 		this.batcher?.enqueue({
 			type: "tool",
 			traceId: this.traceId,
@@ -254,12 +256,15 @@ export class TurnTrace {
 		output,
 		steps,
 		error,
+		finalState,
 		now = Date.now(),
 	}: {
 		status: TurnStatus;
 		output: string;
 		steps: number;
 		error?: string;
+		/** Summary of the timeline the turn left behind (JSON-serialisable). */
+		finalState?: unknown;
 		now?: number;
 	}): Promise<void> {
 		if (this.ended || !this.batcher) return Promise.resolve();
@@ -276,7 +281,11 @@ export class TurnTrace {
 			status,
 			steps,
 			toolCount: this.toolCount,
+			toolErrors: this.toolErrorCount,
 			error: error?.slice(0, 4000),
+			...(finalState === undefined
+				? {}
+				: { finalState: JSON.stringify(finalState).slice(0, 40_000) }),
 			startTime: this.startTime,
 			endTime: Math.max(now, this.startTime),
 		});

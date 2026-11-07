@@ -19,6 +19,7 @@ export class ShadowManager {
 	private viewMode: TimelineViewMode = "final";
 	private listeners = new Set<() => void>();
 	private executingShadow = false;
+	private shadowQueue: Promise<unknown> = Promise.resolve();
 	/** Monotonic counter of final-timeline mutations while a shadow session exists. */
 	private finalGeneration = 0;
 	/** Generation captured when the current shadow session was created/reset. */
@@ -110,7 +111,17 @@ export class ShadowManager {
 	 * Run a mutation against the shadow timeline without flipping the user's
 	 * visible view mode (unless they are already previewing shadow).
 	 */
-	async runOnShadow<T>(fn: () => T | Promise<T>): Promise<T> {
+	runOnShadow<T>(fn: () => T | Promise<T>): Promise<T> {
+		// One shadow run at a time. Each run swaps the shadow tracks into the
+		// scene and saves the scene back afterwards; two overlapping runs would
+		// save each other's tracks (e.g. the empty final timeline as the preview).
+		// Do not call runOnShadow from inside a shadow run: it would wait forever.
+		const run = this.shadowQueue.then(() => this.runOnShadowNow(fn));
+		this.shadowQueue = run.catch(() => undefined);
+		return run;
+	}
+
+	private async runOnShadowNow<T>(fn: () => T | Promise<T>): Promise<T> {
 		this.ensureShadow();
 		const wasViewingShadow = this.viewMode === "shadow";
 		const sceneBefore = cloneTracks(this.editor.scenes.getActiveScene().tracks);

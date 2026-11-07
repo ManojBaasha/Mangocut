@@ -23,7 +23,11 @@ For visual understanding of a clip, call get_media_vision first; if empty, call 
 After multi-step edits, use assert_edit_quality and/or inspect_playhead to verify the preview.
 For complex requests: propose_edit_plan, then act, then verify_edit_plan. Use list_edit_skills / get_edit_skill for recipes (talking-head-cleanup, highlight-reel, broll-pace).
 For speech: transcribe_media / get_transcript, remove_filler_words, cut_on_speech, find_highlights, package_highlights, insert_captions.
-When grading, list_grades then apply_grade. Be concise.`;
+When grading, list_grades then apply_grade.
+Trimming: trim_element keeps durationSeconds of a clip's source starting at sourceStartSeconds (default 0); to keep the first N seconds pass durationSeconds: N. After trimming or deleting, call close_gaps to pack the track instead of moving clips one by one.
+Finish the job. Do not stop to ask a question when a sensible default exists: pick the closest option (e.g. the nearest grade preset, clips in their current order), do the edit, and say what you chose.
+When a tool returns ok: false, read error.code and error.hint, fix the arguments or take another route, and retry. Do not report success for steps that failed; check the timeline (get_timeline_detail) before your final reply.
+Be concise.`;
 
 function agentMaxSteps(): number {
 	const raw = Number(process.env.AI_AGENT_MAX_STEPS ?? "24");
@@ -94,7 +98,9 @@ export async function runAgentTurn({
 		status: TurnStatus,
 	): AgentTurnResult => {
 		if (turn.toolCalls > 0) notePreviewTrace(turn.traceId);
-		void turn.end({ status, output: result.assistantText, steps });
+		void captureFinalState().then((finalState) =>
+			turn.end({ status, output: result.assistantText, steps, finalState }),
+		);
 		return result;
 	};
 	try {
@@ -113,12 +119,10 @@ export async function runAgentTurn({
 		});
 	} catch (error) {
 		if (turn.toolCalls > 0) notePreviewTrace(turn.traceId);
-		void turn.end({
-			status: "error",
-			output: "",
-			steps,
-			error: error instanceof Error ? error.message : String(error),
-		});
+		const message = error instanceof Error ? error.message : String(error);
+		void captureFinalState().then((finalState) =>
+			turn.end({ status: "error", output: "", steps, error: message, finalState }),
+		);
 		throw error;
 	} finally {
 		clearActiveTurn(turn);
@@ -219,11 +223,12 @@ async function runAgentLoop({
 					);
 					verifyFailStreak = passed ? 0 : verifyFailStreak + 1;
 				}
+				toolError = reportedFailure(result);
 				const done = {
 					id: call.id,
 					name: call.function.name,
-					status: "done" as const,
-					detail: summarizeResult(result),
+					status: toolError ? ("error" as const) : ("done" as const),
+					detail: toolError ?? summarizeResult(result),
 				};
 				const idx = toolChips.findIndex((c) => c.id === call.id);
 				if (idx >= 0) toolChips[idx] = done;
@@ -352,6 +357,47 @@ function normalizeChatResponse(data: unknown): {
 		message: obj.message,
 		usage: { costUsd },
 	};
+}
+
+/** The failure a tool reported by returning { ok: false } (it did not throw). */
+function reportedFailure(result: unknown): string | undefined {
+	if (!result || typeof result !== "object" || !("ok" in result)) return undefined;
+	const value = result as {
+		ok?: unknown;
+		reason?: unknown;
+		error?: { message?: unknown; code?: unknown } | unknown;
+	};
+	if (value.ok !== false) return undefined;
+	const err =
+		value.error && typeof value.error === "object"
+			? (value.error as { message?: unknown; code?: unknown })
+			: undefined;
+	const message =
+		(typeof err?.message === "string" && err.message) ||
+		(typeof value.reason === "string" && value.reason) ||
+		"tool reported failure";
+	return typeof err?.code === "string" ? `${err.code}: ${message}` : message;
+}
+
+/** Timeline the turn left in AI Preview, so judges check results, not claims. */
+async function captureFinalState(): Promise<unknown> {
+	try {
+		// Sequential on purpose: each shadow command swaps the preview tracks in
+		// and out of the scene, so overlapping calls can save the wrong tracks.
+		const overview = await executeCommand({
+			name: "get_timeline_overview",
+			args: {},
+			target: "shadow",
+		});
+		const detail = await executeCommand({
+			name: "get_timeline_detail",
+			args: {},
+			target: "shadow",
+		});
+		return { overview, detail };
+	} catch (error) {
+		return { error: error instanceof Error ? error.message : String(error) };
+	}
 }
 
 function summarizeResult(result: unknown): string {

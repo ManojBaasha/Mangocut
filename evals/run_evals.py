@@ -2,7 +2,8 @@
 
 For every `agent-turn` trace in the window it runs:
   - deterministic: turn_completed, no_tool_errors, steps_under_cap
-  - judged (needs OPENROUTER_API_KEY): task_completion, tool_use_quality
+  - judged (needs OPENROUTER_API_KEY): task_completion, tool_use_quality,
+    outcome_matches_request (checks the recorded final timeline, not claims)
 and records each result on the trace as a Langfuse score `eval/<metric>`
 (value 0..1, comment = reason), plus a JSON summary in evals/results/.
 
@@ -17,6 +18,12 @@ import os
 
 os.environ.setdefault("DEEPEVAL_TELEMETRY_OPT_OUT", "YES")
 os.environ.setdefault("DEEPEVAL_UPDATE_WARNING_OPT_IN", "NO")
+
+import logging  # noqa: E402
+
+# DeepEval's async HTTP client is closed after its event loop at exit, which
+# only logs a harmless "Event loop is closed" traceback; keep output readable.
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 import argparse  # noqa: E402
 import json  # noqa: E402
@@ -80,6 +87,18 @@ def main() -> int:
         results = []
         for metric in metrics:
             slug = metric_slug(metric)
+            if slug == "outcome_matches_request" and not test_case.context:
+                # Turns recorded before final-state capture: nothing to check against.
+                results.append(
+                    {
+                        "metric": slug,
+                        "score": None,
+                        "success": None,
+                        "reason": "skipped: no final timeline recorded for this turn",
+                        "error": None,
+                    }
+                )
+                continue
             try:
                 metric.measure(test_case)
                 score = float(metric.score or 0.0)
@@ -120,7 +139,7 @@ def main() -> int:
             }
         )
         line = ", ".join(
-            "{}={}".format(r["metric"], "ERR" if r["score"] is None else f"{r['score']:.2f}")
+            "{}={}".format(r["metric"], ("n/a" if r["error"] is None else "ERR") if r["score"] is None else f"{r['score']:.2f}")
             for r in results
         )
         print(f"{turn.trace_id}  {turn.user_message[:50]!r}\n    {line}")

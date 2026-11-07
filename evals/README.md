@@ -17,7 +17,7 @@ Configuration (environment variables; missing ones are read from
 | --------------------- | --------------------------------------------- |
 | `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` | reading traces, writing scores |
 | `OPENROUTER_API_KEY`  | judged metrics (skipped when unset)           |
-| `EVAL_JUDGE_MODEL`    | judge model id on OpenRouter, default `openai/gpt-4.1-mini` |
+| `EVAL_JUDGE_MODEL`    | judge model id on OpenRouter, default `anthropic/claude-sonnet-4.5` (a different model from the agent) |
 
 ## Run
 

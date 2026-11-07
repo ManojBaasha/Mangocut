@@ -106,6 +106,7 @@ function summarize(turn) {
 		model: m.model ?? null,
 		steps: m.steps ?? turn.calls.length,
 		modelCalls: turn.calls.length,
+		finalTimeline: parseMaybe(m.finalState) ?? null,
 		toolCalls: turn.tools.length,
 		toolErrors: toolErrors.map((t) => ({ tool: t.name.slice(5), step: meta(t).step, error: oneLine(meta(t).error ?? t.statusMessage ?? t.output, 300) })),
 		modelErrors: callErrors.map((c) => ({ step: meta(c).step, statusCode: meta(c).statusCode, error: oneLine(meta(c).error ?? c.statusMessage ?? c.output, 300) })),
@@ -153,6 +154,16 @@ function printTurn(turn, { full }) {
 	console.log(`  steps: ${s.steps}   model calls: ${s.modelCalls}   tool calls: ${s.toolCalls}   tokens: ${s.tokens}   cost: $${s.cost}`);
 	console.log(`  request: ${oneLine(s.request, limit)}`);
 	console.log(`  reply:   ${oneLine(s.reply, limit)}`);
+	const finalState = parseMaybe(turn.root ? meta(turn.root).finalState : undefined);
+	if (finalState && typeof finalState === "object") {
+		const elements = finalState.detail?.elements ?? [];
+		const clips = elements
+			.map((e) => `${e.name ?? e.id} @${Number(e.startTimeSeconds ?? 0).toFixed(2)}s ${Number(e.durationSeconds ?? 0).toFixed(2)}s`)
+			.join(" | ");
+		console.log(
+			`  final timeline: ${elements.length} clip(s), ${Number(finalState.overview?.durationSeconds ?? 0).toFixed(2)}s  ${oneLine(clips, full ? 4000 : 300)}`,
+		);
+	}
 	console.log("\nTimeline (per step: the model call, then the tools it asked for):");
 	const events = [
 		...turn.calls.map((c) => ({ at: c.startTime, kind: "model", o: c })),

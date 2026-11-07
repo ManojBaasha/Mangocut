@@ -15,7 +15,9 @@ from deepeval.models import OpenRouterModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 # Verified against https://openrouter.ai/api/v1/models; override with EVAL_JUDGE_MODEL.
-DEFAULT_JUDGE_MODEL = "openai/gpt-4.1-mini"
+# A different, stronger model than the agent (openai/gpt-4.1-mini), so the agent
+# is not grading itself.
+DEFAULT_JUDGE_MODEL = "anthropic/claude-sonnet-4.5"
 
 
 class _DeterministicMetric(BaseMetric):
@@ -122,7 +124,36 @@ def judged_metrics(model: OpenRouterModel) -> list[BaseMetric]:
         threshold=0.5,
         async_mode=False,
     )
-    return [task, tool_use]
+    outcome = GEval(
+        name="outcome_matches_request",
+        criteria=(
+            "The assistant is a video-editing agent working on an AI Preview "
+            "timeline. CONTEXT is the real timeline state after the turn: it is "
+            "the ground truth, and the assistant's own claims in ACTUAL_OUTPUT "
+            "do not count as evidence. Score how fully the timeline in CONTEXT "
+            "satisfies the user's INPUT (clip count, order, durations, gaps, "
+            "effects requested). For questions that need no edit, judge whether "
+            "the answer is grounded in TOOLS_CALLED results (vision, transcript, "
+            "timeline reads); an unchanged timeline is correct for them. Rules: (1) if ACTUAL_OUTPUT "
+            "says the requested edit failed or was not applied, score at most "
+            "0.2, however reasonable the explanation; (2) if the request asks for "
+            "a change you cannot see in CONTEXT, treat it as not done; (3) if the "
+            "assistant stopped to ask a question when a sensible default would "
+            "have completed the request, score at most 0.3; (4) if ACTUAL_OUTPUT "
+            "claims something CONTEXT contradicts, score at most 0.3; (5) if "
+            "CONTEXT is missing, score 0."
+        ),
+        evaluation_params=[
+            SingleTurnParams.INPUT,
+            SingleTurnParams.ACTUAL_OUTPUT,
+            SingleTurnParams.TOOLS_CALLED,
+            SingleTurnParams.CONTEXT,
+        ],
+        model=model,
+        threshold=0.5,
+        async_mode=False,
+    )
+    return [task, tool_use, outcome]
 
 
 def metric_slug(metric: BaseMetric) -> str:

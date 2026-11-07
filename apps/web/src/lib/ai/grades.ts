@@ -8,6 +8,13 @@ export interface GradePreset {
 
 export const GRADE_PRESETS: GradePreset[] = [
   {
+    "id": "Warm Sunset - Golden Hour",
+    "name": "Warm Sunset - Golden Hour",
+    "bestFor": "Sunsets, golden hour, warm travel and lifestyle footage, beaches, road trips, anything that should feel warm and nostalgic",
+    "filterChain": "curves=r='0/0 0.1/0.08 0.5/0.55 0.85/0.9 1/1':g='0/0 0.1/0.07 0.5/0.5 0.85/0.86 1/0.97':b='0/0 0.1/0.06 0.5/0.44 0.85/0.8 1/0.9':m='0/0 0.08/0.05 0.5/0.52 0.85/0.92 1/1',colorbalance=rs=0.05:gs=0.01:bs=-0.06:rm=0.06:gm=0.02:bm=-0.05:rh=0.04:gh=0.02:bh=-0.04,eq=contrast=1.12:brightness=0.03:saturation=1.2,unsharp=5:5:0.4",
+    "raw": "Warm Sunset - Golden Hour\n=========================\nBest for: Sunsets, golden hour, warm travel and lifestyle footage, beaches, road trips, anything that should feel warm and nostalgic\n\nFFmpeg filter chain:\ncurves=r='0/0 0.1/0.08 0.5/0.55 0.85/0.9 1/1':g='0/0 0.1/0.07 0.5/0.5 0.85/0.86 1/0.97':b='0/0 0.1/0.06 0.5/0.44 0.85/0.8 1/0.9':m='0/0 0.08/0.05 0.5/0.52 0.85/0.92 1/1',colorbalance=rs=0.05:gs=0.01:bs=-0.06:rm=0.06:gm=0.02:bm=-0.05:rh=0.04:gh=0.02:bh=-0.04,eq=contrast=1.12:brightness=0.03:saturation=1.2,unsharp=5:5:0.4\n\nWhat it does:\n- Curves: red lifted through mids and highlights, blue pulled down (capped at 0.9), shadows lifted slightly for a soft film look\n- Color balance: warm push in shadows, mids and highlights (red up, blue down)\n- EQ: gentle contrast, small brightness lift, moderate saturation so skin stays natural\n- Unsharp: light sharpening\n\nNotes:\n- The warm counterpart to Cool Dramatic - Sunset Ocean\n- For a stronger golden cast raise rm to 0.09 and lower bm to -0.08\n- If skin turns orange, reduce saturation to 1.1\n"
+  },
+  {
     "id": "Blue Sky - Daytime Scenic",
     "name": "Blue Sky - Daytime Scenic",
     "bestFor": "Daytime outdoor scenes, golden hour footage, bridges, landscapes, coastal views",

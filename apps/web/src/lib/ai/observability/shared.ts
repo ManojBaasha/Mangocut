@@ -120,7 +120,11 @@ export const turnEndEventSchema = z
 		status: turnStatusSchema,
 		steps: z.number().int().min(0).max(1000),
 		toolCount: z.number().int().min(0).max(100_000),
+		/** Tool calls that threw or returned { ok: false }. */
+		toolErrors: z.number().int().min(0).max(100_000).optional(),
 		error: z.string().max(4000).optional(),
+		/** JSON summary of the AI Preview timeline when the turn ended (for judges). */
+		finalState: z.string().max(40_000).optional(),
 		startTime: timestampSchema,
 		endTime: timestampSchema,
 	})
