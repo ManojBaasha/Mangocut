@@ -1,0 +1,69 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style"],
+  "autoReview": ["open", "push"],
+  "includeBranches": ["main"],
+  "excludeAuthors": ["dependabot[bot]"],
+  "ignorePatterns": "bun.lock\nCargo.lock\nevals/uv.lock\nrust/wasm/pkg/**\nrust/wasm/pkg-node/**\nrust/crates/timeline/tests/fixtures/**\napps/web/src/lib/ai/grades.ts\n**/.next/**\n**/node_modules/**\ntarget/**",
+  "summarySection": {
+    "included": true,
+    "collapsible": true,
+    "defaultOpen": false
+  },
+  "instructions": "Mangocut is an AI-first video editor (fork of OpenCut v0.3.0). Business logic is migrating into rust/ (the single source of truth); apps/web (Next.js) and apps/electron are UI shells. Timeline edits go through the Rust crate rust/crates/timeline via wasm (apply_op), and must stay at parity with the frozen TypeScript commands that generate the golden fixtures. The AI agent edits a shadow 'AI changes' timeline that the user merges or discards; agent tools are registered in apps/web/src/lib/commands-api. Agent runs are traced to a local Langfuse (apps/web/src/lib/ai/observability) and scored by DeepEval (evals/). Flag real bugs and contract breaks over style.",
+  "rules": [
+    {
+      "id": "logic-in-rust",
+      "rule": "Platform-agnostic business logic (timeline operations, validation, time math) belongs in rust/, not in React components, hooks or Electron code. Flag new non-UI logic added under apps/ when an equivalent belongs in a Rust crate.",
+      "scope": ["apps/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "rust-ops-no-ids",
+      "rule": "Rust timeline ops must never generate ids; callers pass new_ids, consumed in order, and running out is a TimelineError with code missing_ids. Ops must return typed TimelineError values (code, message, hint) and never panic on op input: no unwrap/expect/indexing that can fail across the wasm boundary.",
+      "scope": ["rust/crates/timeline/**"],
+      "severity": "high"
+    },
+    {
+      "id": "ticks-are-exact",
+      "rule": "Tick values (startTime, duration, trimStart, trimEnd, sourceDuration) are the Ticks newtype over f64 and must round-trip the exact JSON number; do not round on load and do not change float math in ops without regenerating and checking the parity goldens.",
+      "scope": ["rust/crates/timeline/**"],
+      "severity": "high"
+    },
+    {
+      "id": "parity-goldens",
+      "rule": "Golden fixtures are generated from the frozen legacy TypeScript commands in apps/web/scripts/timeline-parity/legacy. Flag changes that make the harness use the wasm-backed commands (Rust compared with itself) or edit golden JSON by hand.",
+      "scope": ["apps/web/scripts/timeline-parity/**", "rust/crates/timeline/tests/**"],
+      "severity": "high"
+    },
+    {
+      "id": "agent-tool-results",
+      "rule": "Agent tool handlers must report failures as { ok: false, reason, error: { code, message, hint } } and never claim success for an edit the engine rejected. Results of edits should describe the resulting state (ids, start, duration, track) so the model can verify it.",
+      "scope": ["apps/web/src/lib/commands-api/**"],
+      "severity": "high"
+    },
+    {
+      "id": "shadow-runs",
+      "rule": "ShadowManager.runOnShadow is serialized. Do not call it (or executeCommand with target 'shadow') from inside a shadow run, and do not run shadow commands with Promise.all; overlapping runs overwrite the AI Preview.",
+      "severity": "high"
+    },
+    {
+      "id": "no-client-secrets",
+      "rule": "Secrets (OpenRouter key, Langfuse secret key, Better Auth secrets) must stay server-side. Renderer and client components must not import @langfuse/* or OpenTelemetry packages, read secret env vars, or use NEXT_PUBLIC_ for secrets.",
+      "scope": ["apps/web/src/**", "apps/electron/**"],
+      "severity": "high"
+    },
+    {
+      "id": "tracing-no-op",
+      "rule": "Tracing must be a no-op when LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY / LANGFUSE_BASE_URL are unset, must never throw into request handling, and must not delay responses beyond a short bounded flush.",
+      "scope": ["apps/web/src/lib/ai/observability/**", "apps/web/src/app/api/ai/**", "apps/web/src/instrumentation.ts"],
+      "severity": "medium"
+    },
+    {
+      "id": "branding",
+      "rule": "User-facing text, URLs and assets use the Mangocut brand. 'OpenCut' may appear only in the opencut-wasm package alias, upstream attribution, and the LICENSE copyright notice (required by MIT).",
+      "severity": "low"
+    }
+  ],
+  "disabledRules": []
+}
